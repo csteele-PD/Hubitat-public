@@ -1,0 +1,14 @@
+{
+   "author": "CSteele",
+   "gitHubUrl": "https://github.com/HubitatCommunity/",
+   "packages": [
+   	{
+   		"name": "AeotecMultiSensor6 Driver",
+   		"category": "Control",
+   		"tags": "Lights & Switches",
+   		"location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-master/master/docs/HPM/AeotecMultiSensor6.json",
+   		"description": "A more preference filled alternative to the Built-In driver."
+   	}
+   ]
+}
+
