@@ -6,8 +6,29 @@
    		"name": "AeotecMultiSensor6 Driver",
    		"category": "Control",
    		"tags": "Lights & Switches",
-   		"location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-master/master/docs/HPM/AeotecMultiSensor6.json",
+   		"location": "https://raw.githubusercontent.com/HubitatCommunity/AeotecMultiSensor6/master/docs/AeotecMultiSensor6.json",
    		"description": "A more preference filled alternative to the Built-In driver."
+   	},
+   	{
+   		"name": "HoneywellThermo-TCC Driver",
+   		"category": "Control",
+   		"tags": "Temperature & Humidity",
+   		"location": "https://raw.githubusercontent.com/HubitatCommunity/HoneywellThermo-TCC/master/docs/HoneywellThermo-TCC.json",
+   		"description": "Integrate Honeywell's Total Comfort Control for your WiFi Thermostat."
+   	},
+   	{
+   		"name": "Hubitat-BetterLaundryMonitor",
+   		"category": "Control",
+   		"tags": ["Energy Monitoring", "Monitoring", "Appliances"],
+   		"location": "https://raw.githubusercontent.com/HubitatCommunity/Hubitat-BetterLaundryMonitor/master/docs/Hubitat-BetterLaundryMonitor.json",
+   		"description": "Create alerts for your Laundry being done."
+   	},
+   	{
+   		"name": "GetAttributeApp",
+   		"category": "Control",
+   		"tags": "Tools & Utilities",
+   		"location": "https://raw.githubusercontent.com/HubitatCommunity/GetAttributeApp/master/docs/GetAttributeApp.json",
+   		"description": "Display a device's Capabilities, Attributes and Commands."
    	}
    ]
 }
