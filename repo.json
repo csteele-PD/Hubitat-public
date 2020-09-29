@@ -5,14 +5,14 @@
    	{
    		"name": "AeotecMultiSensor6 Driver",
    		"category": "Control",
-   		"tags": "[Lights & Switches]",
+   		"tags": ["Lights & Switches"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/AeotecMultiSensor6/master/docs/AeotecMultiSensor6.json",
    		"description": "A more preference filled alternative to the Built-In driver."
    	},
    	{
    		"name": "HoneywellThermo-TCC Driver",
    		"category": "Control",
-   		"tags": "[Temperature & Humidity]",
+   		"tags": ["Temperature & Humidity"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/HoneywellThermo-TCC/master/docs/HoneywellThermo-TCC.json",
    		"description": "Integrate Honeywell's Total Comfort Control for your WiFi Thermostat."
    	},
@@ -26,7 +26,7 @@
    	{
    		"name": "GetAttributeApp",
    		"category": "Control",
-   		"tags": "[Tools & Utilities]",
+   		"tags": ["Tools & Utilities"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/GetAttributeApp/master/docs/GetAttributeApp.json",
    		"description": "Display a device's Capabilities, Attributes and Commands."
    	}
