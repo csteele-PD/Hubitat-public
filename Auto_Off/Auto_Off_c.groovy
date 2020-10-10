@@ -17,7 +17,7 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  */
-	public static String version()      {  return "v0.1.0"  }
+	public static String version()      {  return "v0.1.1"  }
 
 
 import groovy.time.*
@@ -122,17 +122,18 @@ def mainPage() {
  * entry since the id stays the same and new off times replace old off times.
  */
 def switchHandler(evt) {
-    // Add the watched device if turning on, or off if inverted mode
-    if ((evt.value == "on") ^ (invert == true)) {
-        def delay = Math.floor(autoTime * 60).toInteger()
-        runIn(delay, scheduleHandler, [overwrite: false])
-        state.offList[evt.device.id] = now() + autoTime * 60 * 1000
-    } else {
-        state.offList.remove(evt.device.id)
-    }
+	// Add the watched device if turning on, or off if inverted mode
+	if ((evt.value == "on") ^ (invert == true)) {
+	    def delay = Math.floor(autoTime * 60).toInteger()
+	    runIn(delay, scheduleHandler, [overwrite: false])
+	    state.offList[evt.device.id] = now() + autoTime * 60 * 1000
+	} else {
+	    state.offList.remove(evt.device.id)
+	}
+	updateMyLabel()
 
-    if (debugOutput) log.debug "switchHandler delay: $delay, evt.device:${evt.device}, evt.value:${evt.value}, state:${state}, " +
-        "${evt.value == "on"} ^ ${invert==true} = ${(evt.value == "on") ^ (invert == true)}"
+	if (debugOutput) log.debug "switchHandler delay: $delay, evt.device:${evt.device}, evt.value:${evt.value}, state:${state}, " +
+	    "${evt.value == "on"} ^ ${invert==true} = ${(evt.value == "on") ^ (invert == true)}"
 }
 
 /**
@@ -184,7 +185,6 @@ def display()
 
 def updateMyLabel() {
 	String flag = '<span '
-//	String newLabel
 
 	// Display state / status as part of the label...
 	String myLabel = atomicState.appDisplayName
@@ -198,16 +198,18 @@ def updateMyLabel() {
 		atomicState.appDisplayName = myLabel
 	}
 
+    	// log.debug "jj: $master, ${devices.findAll{it.latestValue("switch") == "on"}.size}"
 	if (!master || master.latestValue("switch") == "off") {
-		myLabel = myLabel + " <span style=\"color:Crimson\">[P]</span>"
-	} else if (master.latestValue("switch") == "on") {
-		myLabel = myLabel + " <span style=\"color:Green\">[A]</span>"		
-	} else {
-		myLabel = myLabel
+	    if (devices.findAll{it.latestValue("switch") == "on"}.size) {
+		    myLabel = myLabel + " <span style=\"color:Green\">[A]</span>"		
+	    } else {
+		myLabel = myLabel + " <span style=\"color:Green\">[E]</span>"
+        }
+	 } else {
+		myLabel = myLabel + " <span style=\"color:Crimson\">[-]</span>"
 	}
 
-	if (debugOutput) log.debug "$app.label, $myLabel"
-	if (app.label != myLabel) app.updateLabel(myLabel)
+	if (app.label != myLabel) app.updateLabel(myLabel) ; log.debug "label: $myLabel"
 }
 
 
