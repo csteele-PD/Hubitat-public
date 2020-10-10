@@ -13,7 +13,7 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  */
-	public static String version()      {  return "v0.1.0"  }
+	public static String version()      {  return "v0.1.1"  }
 
 
 definition(
@@ -36,13 +36,13 @@ preferences {
 
 
 def installed() {
-	log.debug "Installed with settings: ${settings}"
+	log.info "Installed with settings: ${settings}"
 	initialize()
 }
 
 
 def updated() {
-	log.debug "Updated with settings: ${settings}"
+	log.info "Updated with settings: ${settings}"
 	unschedule()
 	unsubscribe()
 	unsubscribe()
