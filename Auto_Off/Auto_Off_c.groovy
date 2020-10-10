@@ -5,7 +5,7 @@
 /**
  *  Auto_Off Child 
  *
- *  Copyright 2020 C Steele
+ *  Copyright 2020 C Steele, Mattias Fornander
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -17,7 +17,7 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  */
-	public static String version()      {  return "v0.1.1"  }
+	public static String version()      {  return "v0.1.2"  }
 
 
 import groovy.time.*
@@ -72,7 +72,6 @@ private initialize() {
 	state.offList = [:]
 
 	subscribe(devices, "switch", switchHandler)
- //   runEvery1Minute(scheduleHandler)
 	updateMyLabel()
 }
 
@@ -126,6 +125,7 @@ def switchHandler(evt) {
 	if ((evt.value == "on") ^ (invert == true)) {
 	    def delay = Math.floor(autoTime * 60).toInteger()
 	    runIn(delay, scheduleHandler, [overwrite: false])
+	    atomicState.cycleEnd = now() + autoTime * 60
 	    state.offList[evt.device.id] = now() + autoTime * 60 * 1000
 	} else {
 	    state.offList.remove(evt.device.id)
@@ -135,6 +135,7 @@ def switchHandler(evt) {
 	if (debugOutput) log.debug "switchHandler delay: $delay, evt.device:${evt.device}, evt.value:${evt.value}, state:${state}, " +
 	    "${evt.value == "on"} ^ ${invert==true} = ${(evt.value == "on") ^ (invert == true)}"
 }
+
 
 /**
  * Handler called every minute to see if any devices should be turned off, or on.
@@ -198,18 +199,51 @@ def updateMyLabel() {
 		atomicState.appDisplayName = myLabel
 	}
 
-    	// log.debug "jj: $master, ${devices.findAll{it.latestValue("switch") == "on"}.size}"
 	if (!master || master.latestValue("switch") == "off") {
 	    if (devices.findAll{it.latestValue("switch") == "on"}.size) {
-		    myLabel = myLabel + " <span style=\"color:Green\">[A]</span>"		
+		    myLabel = myLabel + " <span style=\"color:Green\">" + fixDateTimeString(atomicState.cycleEnd) + " Active</span>"		
 	    } else {
-		myLabel = myLabel + " <span style=\"color:Green\">[E]</span>"
+		myLabel = myLabel + " <span style=\"color:Green\">Idle</span>"
+		atomicState.cycleEnd = -1
         }
 	 } else {
 		myLabel = myLabel + " <span style=\"color:Crimson\">[-]</span>"
+		atomicState.cycleEnd = -1
 	}
 
 	if (app.label != myLabel) app.updateLabel(myLabel) ; log.debug "label: $myLabel"
+}
+
+
+String fixDateTimeString( eventDate) {
+	def today = new Date(now()).clearTime()
+	def target = new Date(eventDate).clearTime()
+	
+	String resultStr = ''
+	String myDate = ''
+	String myTime = ''
+	boolean showTime = true
+	
+	if (target == today) {
+		myDate = 'today'	
+	} else if (target == today-1) {
+		myDate = 'yesterday'
+	} else if (target == today+1) {
+		myDate = 'tomorrow'
+	} else if (dateStr == '2035-01-01' ) {		// to Infinity
+		myDate = 'a long time from now'
+		showTime = false
+	} else {
+		myDate = 'on '+target.format('MM-dd')
+	}	 
+	if (showTime) {
+		myTime = new Date(eventDate).format('h:mma').toLowerCase()
+	}
+	if (myDate || myTime) {
+		resultStr = myTime ? "${myDate} at ${myTime}" : "${myDate}"
+	}
+	if (debugOutput) log.debug "banner: ${resultStr}"
+	return resultStr
 }
 
 
@@ -263,6 +297,7 @@ def updateCheckHandler(resp, data) {
            log.error "Something went wrong: CHECK THE JSON FILE AND IT'S URI"
       }
 }
+
 
 /*
 	padVer
