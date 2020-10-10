@@ -17,7 +17,7 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  */
-	public static String version()      {  return "v0.1.2"  }
+	public static String version()      {  return "v0.1.3"  }
 
 
 import groovy.time.*
@@ -84,7 +84,7 @@ def mainPage() {
 	  updateMyLabel()
 	  section("<h2>${app.label ?: app.name}</h2>"){
             paragraph '<i>Automatically turn off/on devices after set amount of time on/off.</i>'
-            input name: "autoTime", type: "number", title: "Time until auto-off (minutes)", required: true
+            input name: "autoTime", type: "number", title: "Time until auto-off (minutes) [24hrs max.]", required: true
             input name: "devices", type: "capability.switch", title: "Devices", required: true, multiple: true
             input name: "invert", type: "bool", title: "Invert logic (make app Auto On)", defaultValue: false
             input name: "master", type: "capability.switch", title: "Master Switch", multiple: false
@@ -123,9 +123,13 @@ def mainPage() {
 def switchHandler(evt) {
 	// Add the watched device if turning on, or off if inverted mode
 	if ((evt.value == "on") ^ (invert == true)) {
+	    if (autoTime > 1440) {
+	        autoTime = 1440
+	        app.updateSetting("autoTime", autoTime)
+	    }
 	    def delay = Math.floor(autoTime * 60).toInteger()
 	    runIn(delay, scheduleHandler, [overwrite: false])
-	    atomicState.cycleEnd = now() + autoTime * 60
+	    atomicState.cycleEnd = now() + autoTime * 60 * 1000
 	    state.offList[evt.device.id] = now() + autoTime * 60 * 1000
 	} else {
 	    state.offList.remove(evt.device.id)
