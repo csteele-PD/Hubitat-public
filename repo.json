@@ -24,6 +24,13 @@
    		"description": "Create alerts for your Laundry being done."
    	},
    	{
+   		"name": "Auto_Off",
+   		"category": "Control",
+   		"tags": ["Tools & Utilities"],
+   		"location": "https://raw.githubusercontent.com/HubitatCommunity/Auto_Off/master/docs/Auto_Off.json",
+   		"description": "Turn Off a switch after a delay."
+   	},
+   	{
    		"name": "GetAttributeApp",
    		"category": "Control",
    		"tags": ["Tools & Utilities"],
