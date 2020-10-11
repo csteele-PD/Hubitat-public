@@ -28,7 +28,7 @@
    		"category": "Control",
    		"tags": ["Tools & Utilities"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/Auto_Off/main/docs/Auto_Off.json",
-   		"description": "Turn Off a switch after a delay."
+   		"description": "Automatically turn Off a switch after a delay."
    	},
    	{
    		"name": "GetAttributeApp",
