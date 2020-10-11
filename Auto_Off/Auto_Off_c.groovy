@@ -17,7 +17,7 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  */
-	public static String version()      {  return "v0.1.3"  }
+	public static String version()      {  return "v0.1.4"  }
 
 
 import groovy.time.*
@@ -205,7 +205,7 @@ def updateMyLabel() {
 
 	if (!master || master.latestValue("switch") == "off") {
 	    if (devices.findAll{it.latestValue("switch") == "on"}.size) {
-		    myLabel = myLabel + " <span style=\"color:Green\">" + fixDateTimeString(atomicState.cycleEnd) + " Active</span>"		
+		    myLabel = myLabel + "<span style=\"color:Green\"> Active until " + fixDateTimeString(atomicState.cycleEnd) + "</span>"		
 	    } else {
 		myLabel = myLabel + " <span style=\"color:Green\">Idle</span>"
 		atomicState.cycleEnd = -1
