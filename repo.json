@@ -27,7 +27,7 @@
    		"name": "Auto_Off",
    		"category": "Control",
    		"tags": ["Tools & Utilities"],
-   		"location": "https://raw.githubusercontent.com/HubitatCommunity/Auto_Off/master/docs/Auto_Off.json",
+   		"location": "https://raw.githubusercontent.com/HubitatCommunity/Auto_Off/main/docs/Auto_Off.json",
    		"description": "Turn Off a switch after a delay."
    	},
    	{
