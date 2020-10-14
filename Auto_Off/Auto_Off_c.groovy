@@ -24,7 +24,7 @@ import groovy.time.*
 
 // Set app Metadata for the Hub
 definition(
-	name: "Auto_Off no_update",
+	name: "Auto_Off device",
 	namespace: "csteele",
 	author: "Mattias Fornander, CSteele",
 	description: "Automatically turn off/on devices after set amount of time on/off",
