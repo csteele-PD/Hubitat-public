@@ -1,7 +1,7 @@
 /**
  *  Auto_Off Parent App
  *
- *  Copyright 2020 C Steele
+ *  Copyright 2020 C Steele, Mattias Fornander
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -13,7 +13,7 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  */
-	public static String version()      {  return "v0.1.1"  }
+	public static String version()      {  return "v1.0.1"  }
 
 
 definition(
@@ -22,11 +22,11 @@ definition(
 	author: "Mattias Fornander, CSteele",
 	description: "The Child app will automatically turn off/on devices after set amount of time on/off",
 	category: "Automation",
-	importUrl: "",
+	importUrl: "https://raw.githubusercontent.com/HubitatCommunity/Auto_Off/main/Auto_Off.groovy",
 
 	iconUrl: "",
 	iconX2Url: "",
-	iconX3Url: "",
+	iconX3Url: ""
     )
 
 
@@ -36,27 +36,27 @@ preferences {
 
 
 def installed() {
-	log.info "Installed with settings: ${settings}"
+	if (descTextEnable) log.info "Installed with settings: ${settings}"
 	initialize()
 }
 
 
 def updated() {
-	log.info "Updated with settings: ${settings}"
+	if (descTextEnable) log.info "Updated with settings: ${settings}"
 	unschedule()
-	unsubscribe()
-	unsubscribe()
 	if (debugOutput) runIn(1800,logsOff)
 	initialize()
 }
 
+
 def initialize() {
-	log.info "There are ${childApps.size()} child smartapps"
+	if (descTextEnable) log.info "There are ${childApps.size()} child smartapps"
 	childApps.each {child ->
 		child.setDebug(debugOutput, descTextEnable)
 		log.info "Child app: ${child.label}"
 	}
 }
+
 
 def mainPage() {
 	dynamicPage(name: "mainPage") {
@@ -66,10 +66,12 @@ def mainPage() {
 		}
       	section (){app(name: "Auto_Off", appName: "Auto_Off device", namespace: "csteele", title: "New Auto Off Child", multiple: true)}    
       	  
+      	section (){app(name: "Auto_Off", appName: "Auto_Off poll", namespace: "csteele", title: "New Auto Off Child - Poll", multiple: true)}    
+
       	section (title: "<b>Name/Rename</b>") {label title: "Enter a name for this parent app (optional)", required: false}
 	
 		section ("Other preferences") {
-			input "debugOutput",   "bool", title: "<b>Enable debug logging?</b>", defaultValue: true
+			input "debugOutput",   "bool", title: "<b>Enable debug logging?</b>", defaultValue: false
 			input "descTextEnable","bool", title: "<b>Enable descriptionText logging?</b>", defaultValue: true
 		}
       	display()
@@ -90,11 +92,12 @@ def display() {
 		paragraph "<div style='color:#1A77C9;text-align:center;font-weight:small;font-size:9px'>Developed by: C Steele<br/>Version Status: $state.Status<br>Current Version: ${version()} -  ${thisCopyright}</div>"
 	}
 }
+   
         
 // Check Version   ***** with great thanks and acknowledgment to Cobra (CobraVmax) for his original code ****
 def updateCheck()
 {    
-	def paramsUD = [uri: "https://hubitatcommunity.github.io/Auto_Off/version2.json"]
+	def paramsUD = [uri: "https://raw.githubusercontent.com/HubitatCommunity/Auto_Off/main/docs/version2.json", timeout: 10]
 	
  	asynchttpGet("updateCheckHandler", paramsUD) 
 }
@@ -112,7 +115,7 @@ def updateCheckHandler(resp, data) {
 		def newVer = padVer(respUD.application.(state.InternalName).ver)
 		def currentVer = padVer(version())               
 		state.UpdateInfo = (respUD.application.(state.InternalName).updated)
-            // log.debug "updateCheck: ${respUD.driver.(state.InternalName).ver}, $state.UpdateInfo, ${respUD.author}"
+            // log.debug "updateCheck: ${respUD.application.(state.InternalName).ver}, $state.UpdateInfo, ${respUD.author}"
 	
 		switch(newVer) {
 			case { it == "NLS"}:
@@ -135,12 +138,16 @@ def updateCheckHandler(resp, data) {
 
 	      sendEvent(name: "chkUpdate", value: state.UpdateInfo)
 	      sendEvent(name: "chkStatus", value: state.Status)
+
+		childApps.each { child -> child.updateCheck(respUD) }
+
       }
       else
       {
-           log.error "Something went wrong: CHECK THE JSON FILE AND IT'S URI"
+           if (descTextEnable) log.error "Something went wrong: CHECK THE JSON FILE AND IT'S URI"
       }
 }
+
 
 /*
 	padVer
