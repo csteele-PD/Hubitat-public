@@ -36,6 +36,13 @@
    		"tags": ["Tools & Utilities"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/GetAttributeApp/master/docs/GetAttributeApp.json",
    		"description": "Display a device's Capabilities, Attributes and Commands."
+   	},
+      {
+   		"name": "Air Quality from AirNow",
+   		"category": "Control",
+   		"tags": ["Temperature & Humidity"],
+   		"location": "https://raw.githubusercontent.com/HubitatCommunity/AirQuality-AirNow/main/docs/AirQuality-AirNow.json",
+   		"description": "Yet Another Air Quality Index from AirNow "
    	}
    ]
 }
