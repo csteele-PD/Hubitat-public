@@ -4,7 +4,7 @@
    "packages": [
    	{
    		"name": "AeotecMultiSensor6 Driver",
-   		"id": "41a8de23-9da5-4204-9048-d8038fe21dc4",
+   		"id": "602887ed-0715-463f-bccf-76e96199e41f",
    		"category": "Control",
    		"tags": ["Lights & Switches"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/AeotecMultiSensor6/master/docs/AeotecMultiSensor6.json",
@@ -12,7 +12,7 @@
    	},
    	{
    		"name": "HoneywellThermo-TCC Driver",
-   		"id": "0982a2be-81b4-43b1-88ed-350fa8ce62c9",
+   		"id": "05dde39b-e9a8-4589-8d43-77e7556a20fe",
    		"category": "Control",
    		"tags": ["Temperature & Humidity"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/HoneywellThermo-TCC/master/docs/HoneywellThermo-TCC.json",
@@ -20,7 +20,7 @@
    	},
    	{
    		"name": "Hubitat-BetterLaundryMonitor",
-   		"id": "ffddcbb2-5ac6-40df-a25c-3a8a3046cc96",
+   		"id": "1f21770b-3beb-44e8-b518-0dd6873aef55",
    		"category": "Control",
    		"tags": ["Energy Monitoring", "Monitoring", "Appliances"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/Hubitat-BetterLaundryMonitor/master/docs/Hubitat-BetterLaundryMonitor.json",
@@ -28,7 +28,7 @@
    	},
    	{
    		"name": "Auto_Off",
-   		"id": "b03472ad-a305-4544-8e76-1d5b39e750b0",
+   		"id": "7ff58c4c-4ee9-4089-a2ff-a178e248bdc2",
    		"category": "Control",
    		"tags": ["Lights & Switches", "Tools & Utilities"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/Auto_Off/main/docs/Auto_Off.json",
@@ -36,7 +36,7 @@
    	},
    	{
    		"name": "GetAttributeApp",
-   		"id": "b121e7fc-8a00-43bf-ab6f-15b3624ea2f4",
+   		"id": "1d32f650-bbe7-4700-9596-83dff854e698",
    		"category": "Control",
    		"tags": ["Tools & Utilities"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/GetAttributeApp/master/docs/GetAttributeApp.json",
@@ -44,7 +44,7 @@
    	},
       {
    		"name": "Air Quality from AirNow",
-   		"id": "8f338202-fafb-4b6a-bd52-d316d93bf54f",
+   		"id": "045731d0-372c-4fd9-8944-b20129dd31a1",
    		"category": "Control",
    		"tags": ["Temperature & Humidity"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/AirQuality-AirNow/main/docs/AirQuality-AirNow.json",
