@@ -1,0 +1,11 @@
+{
+        "author": "C Steele",
+        "comment": "",
+        "copyright": " &#9400; 2021 cSteele",
+         "application": {
+         },
+         "driver": {
+                 "EtherRain 8 Valves":  {"ver": "1.0.0", "updated": "09/25/2021"},
+                 "EtherRain Device (Child)":  {"ver": "1.0.0", "updated": "09/25/2021"}
+         }
+}
