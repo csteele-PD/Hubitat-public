@@ -14,7 +14,7 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  * 
- * csteele: v2.0.1   Put lrM into Child
+ * csteele: v2.0.1   Put setLastRunningMode into Child
  *
  * csteele: v2.0.0   Initial Commit
  *
@@ -54,6 +54,7 @@ metadata {
         command    "coolLevelUp"
         command    "coolLevelDown"
         command    "setFollowSchedule"
+        command	 "setLastRunningMode"
 
 /* -= Attribute List =-
  	[thermostatFanMode, humidifierLowerLimit, supportedThermostatFanModes, supportedThermostatModes, followSchedule, humidifierSetPoint, thermostatSetpoint, 
@@ -121,9 +122,6 @@ void parse(List description) {
     }
 }
 
-//void poll() {
-//    parent?.componentPoll(this.device)
-//}
 
 void setFollowSchedule() {
     parent?.componentSetFollowSchedule(this.device)
@@ -198,10 +196,18 @@ void heatLevelUp() {
 }
 
 
+/*
+	device UI: do nothing 
+	"lrM" must be exposed as a Command to to the UI so that the Parent can call it. 
+	That puts a button on the UI that really shouldn't be pushed. This method overloads 
+	lrM to only capture the button push. The parent will call lrM with (mode).
+*/
 
+def setLastRunningMode() {
+    log.info "lrM button pushed."
+}
 
-
-def lrM (mode) {
+def setLastRunningMode (mode) {
 	String lrm = getDataValue("lastRunningMode")
 	if (mode.contains("auto") || mode.contains("off") && lrm != "heat") { updateDataValue("lastRunningMode", "heat") }
 	 else { updateDataValue("lastRunningMode", mode) }
