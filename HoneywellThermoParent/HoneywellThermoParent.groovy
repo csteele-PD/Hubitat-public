@@ -14,8 +14,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  *
- * csteele: v2.0.1   Put setLastRunningMode into Child
  *
+ * csteele: v2.0.2   put childParamMap into "state"
+ * csteele: v2.0.1   Put setLastRunningMode into Child
  * csteele: v2.0.0   Initial Commit
  *
  * Forked from:
@@ -25,26 +26,17 @@
 
 import groovy.transform.Field
 
- public static String version()	{  return "v2.0.1"  }
+ public static String version()	{  return "v2.0.2"  }
  public static String tccSite() 	{  return "mytotalconnectcomfort.com"  }
  public static String type() 		{  return "Thermostat"  }
 
 @Field static Map<String, Map> modeMap = [auto:5, cool:3, heat:1, off:2, 'emergency heat':4]
 @Field static Map<String, Map> fanMap = [auto:0, on:1, circulate:2, followSchedule:3] 
 
-@Field static Map<String, Map> childParamMap = 
-[
-	"0":		[childDNI: null, honeywelldevice: null, haveHumidifier: null, enableOutdoorTemps: null, enableHumidity: null, setPermHold: null, pollIntervals: null],
-	"1":		[childDNI: null, honeywelldevice: null, haveHumidifier: null, enableOutdoorTemps: null, enableHumidity: null, setPermHold: null, pollIntervals: null],
-	"2":		[childDNI: null, honeywelldevice: null, haveHumidifier: null, enableOutdoorTemps: null, enableHumidity: null, setPermHold: null, pollIntervals: null],
-	"3":		[childDNI: null, honeywelldevice: null, haveHumidifier: null, enableOutdoorTemps: null, enableHumidity: null, setPermHold: null, pollIntervals: null],
-	"4":		[childDNI: null, honeywelldevice: null, haveHumidifier: null, enableOutdoorTemps: null, enableHumidity: null, setPermHold: null, pollIntervals: null],
-]
 
 metadata {
 	definition (name: "Honeywell Thermo Parent", namespace: "csteele", author: "Eric Thomas, lg kahn, C Steele", importUrl: "https://raw.githubusercontent.com/HubitatCommunity/HoneywellThermo-TCC/master/HoneywellThermo-TCC_C.groovy") {
 		command "addThermostat"
-		command "listThermostats"
 
 /* -= Attribute List =-
  	[thermostatFanMode, humidifierLowerLimit, supportedThermostatFanModes, supportedThermostatModes, followSchedule, humidifierSetPoint, thermostatSetpoint, 
@@ -67,7 +59,6 @@ metadata {
 }
 
 
-
 void logsOff(){
 	log.warn "debug logging disabled..."
 	device.updateSetting("debugOutput",[value:"false",type:"bool"])
@@ -78,27 +69,29 @@ void updated(){
 	log.warn "debug logging is: ${debugOutput == true}"
 	log.warn "description logging is: ${descTextEnable == true}"
 	log.info "Count of Children: $numChild"
-//	if (debugOutput) runIn(1800,logsOff)
+	if (debugOutput) runIn(1800,logsOff)
 }
 
 // parse events into attributes
 void parse(String description) {
-	//your parser here...
+	//parse nothing...
 }
 
 
 // params passed in from each Child: DNI, honeywelldevice, haveHumidifier, enableOutdoorTemps, enableHumidity, setPermHold, pollIntervals
 void setParams(cDNI, dev, hH, eOT, eH, sPH, pI) {
 	String[] dniParts = cDNI.split("_")
-	childParamMap."${dniParts[1]}".childDNI 			= cDNI
-	childParamMap."${dniParts[1]}".honeywelldevice 		= dev
-	childParamMap."${dniParts[1]}".haveHumidifier 		= hH
-	childParamMap."${dniParts[1]}".enableOutdoorTemps 	= eOT
-	childParamMap."${dniParts[1]}".enableHumidity		= eH
-	childParamMap."${dniParts[1]}".setPermHold 		= sPH
-	childParamMap."${dniParts[1]}".pollIntervals 		= pI
-	if (descTextEnable) log.info "ChildParams: $cDNI, $dev, $hH, $eOT, $eH, $sPH, $pI, -${childParamMap."${dniParts[1]}".honeywelldevice}-"
+	state.childParamMap."${dniParts[1]}".childDNI 			= cDNI
+	state.childParamMap."${dniParts[1]}".honeywelldevice 		= dev
+	state.childParamMap."${dniParts[1]}".haveHumidifier 		= hH
+	state.childParamMap."${dniParts[1]}".enableOutdoorTemps 	= eOT
+	state.childParamMap."${dniParts[1]}".enableHumidity		= eH
+	state.childParamMap."${dniParts[1]}".setPermHold 		= sPH
+	state.childParamMap."${dniParts[1]}".pollIntervals 		= pI
+	
+	if (descTextEnable) log.info "ChildParams: $cDNI, $dev, $hH, $eOT, $eH, $sPH, $pI, -${state.childParamMap."${dniParts[1]}".honeywelldevice}-"
 }
+
 
 
 void installed() { initialize() }
@@ -107,6 +100,7 @@ void initialize(){
 //	cd.each { deleteChildDevice(it.deviceNetworkId) }
 	cd = getChildDevice("${thisId}-${type}_0") // gets list of children
 	if (!cd) {
+		state.childParamMap = [:]
 		cd = createChild("0")
 		state.nextChild = "1"
 	}
@@ -118,16 +112,11 @@ void addThermostat() {
 	log.debug "addThermostat: $state.nextChild"
 }
 def createChild(String numChild) {
-//	def cd = getChildDevice("${thisId}-${type}") // gets list of children
 	String thisId = device.id
 	log.debug "createChild: ${thisId}-${type()}_$numChild, $cd"
+	state.childParamMap << [	"$numChild":		[childDNI: null, honeywelldevice: null, haveHumidifier: null, enableOutdoorTemps: null, enableHumidity: null, setPermHold: null, pollIntervals: null]]
 	def cd = addChildDevice("csteele", "Honeywell WiFi Component ${type()}", "${thisId}-${type()}_$numChild", [name: "${device.displayName} ${type()}", isComponent: true])
 	return cd 
-}
-
-void listThermostats() {
-	def cd = getChildDevices()?.findAll { it.deviceNetworkId > "${device.id}-${type()}"}
-	if (debugOutput) log.debug "listThermostats: $cd"
 }
 
 void componentRefresh(cd)
@@ -140,7 +129,6 @@ void componentRefresh(cd)
 
 //child device methods
 void componentDoRefresh(cd, Boolean fromUnauth = false) {
-	String[] dniParts = cd.deviceNetworkId.split("_")
 	if (debugOutput) log.debug "received Refresh request from ${cd.displayName} to Honeywell TCC 'refresh', units: = °${location.temperatureScale}, fromUnauth = $fromUnauth"
 	login(fromUnauth)
 	getHumidifierStatus(cd, fromUnauth)
@@ -205,14 +193,14 @@ void componentSetThermostatMode(cd, val) {
 
 void componentSetCoolingSetpoint(cd, val) {
 	if (debugOutput) log.info "received Cooling Setpoint request from ${cd.displayName}"
-	deviceDataInit(childParamMap."${dniParts[1]}".setPermHold) 	 // reset all params, then set individually
+	deviceDataInit(state.childParamMap."${dniParts[1]}".setPermHold) 	 // reset all params, then set individually
 	setStatus(cd)
 	getChildDevice(cd.deviceNetworkId).parse([[name:"coolingSetpoint", value:val, descriptionText:"${cd.displayName} Cooling Setpoint is ${val}", unit:"°"]])
 }
 
 void componentSetHeatingSetpoint(cd, val) {
 	if (debugOutput) log.info "received Heating Setpoint request from ${cd.displayName}"
-	deviceDataInit(childParamMap."${dniParts[1]}".setPermHold) 	 // reset all params, then set individually
+	deviceDataInit(state.childParamMap."${dniParts[1]}".setPermHold) 	 // reset all params, then set individually
 	setStatus(cd)
 	getChildDevice(cd.deviceNetworkId).parse([[name:"heatingSetpoint", value:val, descriptionText:"${cd.displayName} Heating Setpoint is ${val}", unit:"°"]])
 }
@@ -303,7 +291,7 @@ void componentSetFollowSchedule(cd) {
 
 List<String> configure() {
 	log.warn "configure..."
-//	runIn(1800,logsOff)
+	runIn(1800,logsOff)
 }
 
 
@@ -311,12 +299,12 @@ List<String> configure() {
 
 def getStatus(cd) {
 	String[] dniParts = cd.deviceNetworkId.split("_")
-	if (debugOutput) log.debug "enable outside temps = ${childParamMap."${dniParts[1]}".enableOutdoorTemps}"
+	if (debugOutput) log.debug "enable outside temps = ${state.childParamMap."${dniParts[1]}".enableOutdoorTemps}"
 	def today = new Date()
 	//if (debugOutput) log.debug "https://${tccSite()}/portal/Device/CheckDataSession/${settings.honeywelldevice}?_=$today.time"
 	
 	def params = [
-	    uri: "https://${tccSite()}/portal/Device/CheckDataSession/${childParamMap."${dniParts[1]}".honeywelldevice}",
+	    uri: "https://${tccSite()}/portal/Device/CheckDataSession/${state.childParamMap."${dniParts[1]}".honeywelldevice}",
 	    headers: [
 	        'Accept': '*/*', // */ comment
 	        'DNT': '1',
@@ -410,11 +398,11 @@ def getStatusHandler(resp, data) {
 		
 			def operatingState = [ 0: 'idle', 1: 'heating', 2: 'cooling' ][equipmentStatus] ?: 'idle'
 		
-			if ((childParamMap."${dniParts[1]}".haveHumidifier != 'Yes') && (fanIsRunning == true) && (equipmentStatus == 0))
+			if ((state.childParamMap."${dniParts[1]}".haveHumidifier != 'Yes') && (fanIsRunning == true) && (equipmentStatus == 0))
 			{ 
 			    operatingState = "fan only"
 		
-			} else if ((childParamMap."${dniParts[1]}".haveHumidifier == 'Yes')  && (fanIsRunning == true) && (equipmentStatus == 0) && (fanMode == 0)) {
+			} else if ((state.childParamMap."${dniParts[1]}".haveHumidifier == 'Yes')  && (fanIsRunning == true) && (equipmentStatus == 0) && (fanMode == 0)) {
 			    operatingState = "Humidifying"
 			}
 		
@@ -437,7 +425,7 @@ def getStatusHandler(resp, data) {
 			getChildDevice(cd.deviceNetworkId).parse([[name:"heatingSetpoint", value:heatSetPoint, descriptionText:"${cd.displayName} was Set to $nheatSetPoint", unit:"°${location.temperatureScale}"]])
 			getChildDevice(cd.deviceNetworkId).parse([[name:"humidity", value:curHumidity as Integer, descriptionText:"${cd.displayName} was Set to $curHumidity", unit:"%"]])
 		
-			if (childParamMap."${dniParts[1]}".haveHumidifier == 'Yes') {
+			if (state.childParamMap."${dniParts[1]}".haveHumidifier == 'Yes') {
 				// kludge to figure out if humidifier is on, fan has to be auto, and if fan is on but not heat/cool and we have enabled the humidifyer it should be humidifying"
 				// if (debugOutput)
 			    if (debugOutput) log.debug "fanIsRunning = $fanIsRunning, equip status = $equipmentStatus, fanMode = $fanMode, temp = $curTemp, humidity = $curHumidity"
@@ -459,14 +447,14 @@ def getStatusHandler(resp, data) {
 			def now = new Date().format('MM/dd/yyyy h:mm a', location.timeZone)
 			getChildDevice(cd.deviceNetworkId).parse([[name:"lastUpdate", value:now, descriptionText:"${cd.displayName} was Set to $now"]])
 			
-			if (childParamMap."${dniParts[1]}".enableOutdoorTemps == "Yes") {
+			if (state.childParamMap."${dniParts[1]}".enableOutdoorTemps == "Yes") {
 		
-				if (childParamMap."${dniParts[1]}".hasOutdoorHumid) {
+				if (state.childParamMap."${dniParts[1]}".hasOutdoorHumid) {
 					setOutdoorHumidity(curOutdoorHumidity)
 					getChildDevice(cd.deviceNetworkId).parse([[name:"outdoorHumidity", value:curOutdoorHumidity as Integer, descriptionText:"${cd.displayName} was Set to $curOutdoorHumidity", unit:"%"]])
 			    }
 			
-			    if (childParamMap."${dniParts[1]}".hasOutdoorTemp) {
+			    if (state.childParamMap."${dniParts[1]}".hasOutdoorTemp) {
 					setOutdoorTemperature(curOutdoorTemp)
 					getChildDevice(cd.deviceNetworkId).parse([[name:"outdoorTemperature", value:curOutdoorTemp as Integer, descriptionText:"${cd.displayName} was Set to $curOutdoorTemp", unit:"°${location.temperatureScale}"]])
 			    }
@@ -488,11 +476,11 @@ def getStatusHandler(resp, data) {
 
 def getHumidifierStatus(cd, Boolean fromUnauth = false) {
 	String[] dniParts = cd.deviceNetworkId.split("_")
-	if (debugOutput)  log.debug "in get humid status enable humidity = ${childParamMap."${dniParts[1]}".enableHumidity}"
-	if (childParamMap."${dniParts[1]}".haveHumidifier == 'No') return
+	if (debugOutput)  log.debug "in get humid status enable humidity = ${state.childParamMap."${dniParts[1]}".enableHumidity}"
+	if (state.childParamMap."${dniParts[1]}".haveHumidifier == 'No') return
 	
 	def params = [
-	  uri: "https://${tccSite()}/portal/Device/CheckDataSession/${childParamMap."${dniParts[1]}".honeywelldevice}",
+	  uri: "https://${tccSite()}/portal/Device/CheckDataSession/${state.childParamMap."${dniParts[1]}".honeywelldevice}",
         headers: [
             'Accept': '*/*', // */ comment
             'DNT': '1',
@@ -627,13 +615,13 @@ def setStatus(cd) {
 	        'Accept-Language': 'en-US,en,q=0.8',
 	        'Connection': 'keep-alive',
 	        'Host': "${tccSite()}",
-	        'Referer': "https://${tccSite()}/portal/Device/Control/${childParamMap."${dniParts[1]}".honeywelldevice}",
+	        'Referer': "https://${tccSite()}/portal/Device/Control/${state.childParamMap."${dniParts[1]}".honeywelldevice}",
 	        'X-Requested-With': 'XMLHttpRequest',
 	        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1500.95 Safari/537.36',
 	        'Cookie': device.data.cookiess
 	    ],
 	    body: [
-	        DeviceID: "${childParamMap."${dniParts[1]}".honeywelldevice}",
+	        DeviceID: "${state.childParamMap."${dniParts[1]}".honeywelldevice}",
 	        SystemSwitch: device.data.SystemSwitch,
 	        HeatSetpoint: device.data.HeatSetpoint,
 	        CoolSetpoint: device.data.CoolSetpoint,
@@ -792,7 +780,6 @@ def login(Boolean fromUnauth = false) {
 			}
 		}
 	}
-	//getChildDevice(cd.deviceNetworkId).parse([[name:"TCCstatus", value:"success", descriptionText:"${cd.displayName} TCC transaction: success"]])
 }	
 
 
