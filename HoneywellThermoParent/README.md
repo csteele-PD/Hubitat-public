@@ -9,10 +9,9 @@ This works by contacting Honeywell over the Internet using your Honeywell ID/PW 
 </ul>
 
 ----
-If you never setup TCC, then you won't have that info.<p>
-
+If you never setup TCC, then you won't have that info. Browse to:<p>
 https://www.mytotalconnectcomfort.com/portal/<p>
 
-Create an account if you don't have one.<p>
+Create an account if you don't have one, or just login.<p>
 
-The Honeywell Device ID is found as the last 6 or 7 digits on the end of the TCC URL after login via a browser.
+The Honeywell Device ID is found as the last 6 or 7 digits on the end of the TCC URL after login.
