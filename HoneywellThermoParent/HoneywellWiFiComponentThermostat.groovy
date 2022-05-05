@@ -1,9 +1,9 @@
 /**
- * IMPORT URL: https://raw.githubusercontent.com/HubitatCommunity/HoneywellThermo-TCC/master/HoneywellThermo-TCC_C.groovy
+ * IMPORT URL: 
  *
  *  Total Comfort API
  *   
- *  Based on Code by Eric Thomas, Edited by Bob Jase, and C Steele
+ *  Based on Generic Component Code by Hubitat/Mike Maxwell and edited by C Steele
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -14,8 +14,11 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  * 
- * csteele: v2.0.1   Put setLastRunningMode into Child
  *
+ * csteele: v2.0.2   adjusted Schedule() to be from the current minute.
+ *				as in:  0 20/30 * ? * * == "At second :00, every 30 minutes starting at minute :20, of every hour",
+ *				assuming Poll was started at minute 20 of the current hour
+ * csteele: v2.0.1   Put setLastRunningMode into Child
  * csteele: v2.0.0   Initial Commit
  *
  * Forked from:
@@ -23,7 +26,7 @@
  *                    added fanOperatingState Attribute.
 **/
 
- public static String version()     {  return "v2.0.1"  }
+ public static String version()     {  return "v2.0.2"  }
 
 
 metadata {
@@ -89,28 +92,30 @@ void updated() {
 void parentUpdate() {
 	String cd = device.deviceNetworkId
 	parent.setParams(cd, honeywelldevice, haveHumidifier, enableOutdoorTemps, enableHumidity, setPermHold, pollIntervals)
-//	parent.setParams(this.device, honeywelldevice, haveHumidifier, enableOutdoorTemps, enableHumidity, setPermHold, pollIntervals)
 }
 
 void poll() {
 	if (txtEnable) log.debug "received Poll request from ${this.displayName} Poll Interval: $pollIntervals"
 	// build out a cron string for pollInterval options 1 min -- 60 min
+	def boutNow = new Date(new Date().time)
 	Integer pIminute = pollIntervals.toInteger() / 60 // find minutes
 	Integer pIhour = pIminute / 60 // find hours
 
-	String pIntMinute = (pIminute == 60 || pIminute == 0) ? "*" : "*/$pIminute"
+	String pIntMinute = (pIminute == 60 || pIminute == 0) ? "${boutNow.minutes}" : "${boutNow.minutes}/$pIminute"
 	String pIntHour = (pIhour < 1) ? "*" : "*/$pIhour"
 
-	if (pIminute) { 
+	if (pollIntervals) { 
 		unschedule(runPoll)
       	schedule("0 $pIntMinute $pIntHour ? * *", refresh) 
 	}
+
+	// clicking Poll means do at least one refresh, even if there's no poll interval
+	refresh()
 }
 
 void installed() {
 	log.info "Installed..."
 	device.updateSetting("txtEnable",[type:"bool",value:true])
-//	refresh()
 }
 
 void parse(String description) { log.warn "parse(String description) not implemented" }
@@ -198,9 +203,9 @@ void heatLevelUp() {
 
 /*
 	device UI: do nothing 
-	"lrM" must be exposed as a Command to to the UI so that the Parent can call it. 
-	That puts a button on the UI that really shouldn't be pushed. This method overloads 
-	lrM to only capture the button push. The parent will call lrM with (mode).
+	"lrM" must be exposed as a Command to the UI so that Parent can call it. 
+	That puts a button on the UI that really shouldn't be pushed. Overloads 
+	lrM to capture the button push, while Parent will call lrM with (mode).
 */
 
 def setLastRunningMode() {
