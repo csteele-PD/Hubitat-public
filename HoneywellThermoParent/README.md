@@ -1,4 +1,4 @@
-# Honeywell Thermo Parent
+# Honeywell Thermo Parent / Child
 
 This works by contacting Honeywell over the Internet using your Honeywell ID/PW and Thermostat ID. Yes, CLOUD.<p>
 <ul>
