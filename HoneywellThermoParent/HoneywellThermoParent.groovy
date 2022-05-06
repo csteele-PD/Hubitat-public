@@ -1,5 +1,5 @@
 /**
- * IMPORT URL: https://raw.githubusercontent.com/HubitatCommunity/HoneywellThermo-TCC/master/HoneywellThermo-TCC_C.groovy
+ * IMPORT URL: 
  *
  *  Total Comfort API
  *   
@@ -35,7 +35,7 @@ import groovy.transform.Field
 
 
 metadata {
-	definition (name: "Honeywell Thermo Parent", namespace: "csteele", author: "Eric Thomas, lg kahn, C Steele", importUrl: "https://raw.githubusercontent.com/HubitatCommunity/HoneywellThermo-TCC/master/HoneywellThermo-TCC_C.groovy") {
+	definition (name: "Honeywell Thermo Parent", namespace: "csteele", author: "Eric Thomas, lg kahn, C Steele") {
 		command "addThermostat"
 
 /* -= Attribute List =-
@@ -59,6 +59,7 @@ metadata {
 }
 
 
+
 void logsOff(){
 	log.warn "debug logging disabled..."
 	device.updateSetting("debugOutput",[value:"false",type:"bool"])
@@ -74,7 +75,7 @@ void updated(){
 
 // parse events into attributes
 void parse(String description) {
-	//parse nothing...
+	//parse nothing, ever, probably...
 }
 
 
@@ -115,7 +116,7 @@ def createChild(String numChild) {
 	String thisId = device.id
 	log.debug "createChild: ${thisId}-${type()}_$numChild, $cd"
 	state.childParamMap << [	"$numChild":		[childDNI: null, honeywelldevice: null, haveHumidifier: null, enableOutdoorTemps: null, enableHumidity: null, setPermHold: null, pollIntervals: null]]
-	def cd = addChildDevice("csteele", "Honeywell WiFi Component ${type()}", "${thisId}-${type()}_$numChild", [name: "${device.displayName} ${type()}", isComponent: true])
+	def cd = addChildDevice("csteele", "Honeywell WiFi ${type()} Component", "${thisId}-${type()}_$numChild", [name: "${device.displayName} ${type()}", isComponent: true])
 	return cd 
 }
 
