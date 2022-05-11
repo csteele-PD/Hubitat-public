@@ -49,6 +49,14 @@
    		"tags": ["Temperature & Humidity"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/AirQuality-AirNow/main/docs/AirQuality-AirNow.json",
    		"description": "Yet Another Air Quality Index from AirNow "
+   	},
+      {
+   		"name": "Honeywell Thermo Parent",
+   		"id": "75e88544-33e9-467b-9064-9954b2646ef3",
+   		"category": "Control",
+   		"tags": ["Temperature & Humidity"],
+   		"location": "https://raw.githubusercontent.com/HubitatCommunity/HoneywellThermoParent/main/docs/HoneywellThermoParent.json",
+   		"description": "A Parent/child version of the original"
    	}
    ]
 }
