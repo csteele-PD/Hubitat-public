@@ -1,4 +1,4 @@
-# RELEASED now found at 
+# RELEASED - now found at 
 https://github.com/HubitatCommunity/HoneywellThermoParent
 
 
