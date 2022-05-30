@@ -35,7 +35,7 @@
    		"description": "Automatically turn Off a switch after a delay."
    	},
    	{
-   		"name": "Auto_OffBundle",
+   		"name": "Auto_Off Bundle",
    		"id": "130db2f2-69b0-45a6-b27f-1416ea30ee33",
    		"category": "Control",
    		"tags": ["Lights & Switches", "Tools & Utilities"],
