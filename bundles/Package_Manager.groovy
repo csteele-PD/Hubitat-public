@@ -342,7 +342,7 @@ def prefInstallRepositorySearch() {
 	installMode = "search"
 	searchApiUrl = searchFuzzyApiUrl    // -- CSteele
 	srchSrcTxt = "Fuzzy"     // -- CSteele
-	if (srchMethod) { 
+	if (settings?.srchMethod != false) { 
 		srchSrcTxt = "Fast" 
 		searchApiUrl = searchFastApiUrl
 	} // -- CSteele
@@ -390,7 +390,7 @@ def prefInstallRepositorySearchResults() {
 		def searchResults = []
 		for (repo in result.data.repositories) {
 			for (packageItem in repo.packages) {
-				if (srchMethod) {
+				if (settings?.srchMethod  != false) {
 					def pkg_tags = packageItem.tags[1..-2].tokenize(',')	// -- CSteele
 					packageItem.tags = pkg_tags 		// -- CSteele
 				}
@@ -871,7 +871,7 @@ def performInstallation() {
 
 	for (bundleToInstall in requiredBundles) {					// required = true
 		def location = getItemDownloadLocation(bundleToInstall.value)
-		setBackgroundStatusMessage("Installing ${bundleToInstall.value.name} from $location")
+		setBackgroundStatusMessage("Installing ${bundleToInstall.value.name}") // from $location")
 		if (!installBundle(location)) {
 			state.manifests.remove(pkgInstall)
 			return rollback("Failed to install bundle ${bundleToInstall.value.name} using ${location}. Please notify the package developer.", false)
@@ -1455,7 +1455,7 @@ def prefPkgUninstallConfirm() {
 				}
 
 				for (bundle in pkg.bundles) {
-					if (bundle.heID != null)
+					if (bundle.name != null)
 						str += "<li>${bundle.name} (Bundle)</li>"
 				}
 			}
@@ -2680,8 +2680,6 @@ def clearStateSettings(clearProgress) {
 		errorTitle = null
 		errorMessage = null
 	}
-	if (settings?.clrManifests != false) { state.manifests = [:] }
-	app.updateSetting("clrManifests",[value:"false",type:"bool"])
 
 	// Things that used to be in state that are not any longer. Clean up
 	state.remove("action")
@@ -3582,45 +3580,56 @@ def installBundle(bundleLocation) {
 	return false
 }
 
+/*
+	Web Scraping courtesy of: "thebearmay",  "Jean P. May, Jr." per Apache v2 license.
+*/
 def uninstallBundle(bundleName) {
 // Bundles don't return an ID when added, the ID has to be extracted by scraping /bundles/list 
 
-    def params = [
-        uri: "http://127.0.0.1:8080/bundle/list",
-        contentType: "text/html",
-        textParser: true,
-        headers: ["Cookie": cookie]                   
-    ]
+// in platform v2.3.2 getInstalledBundlesList() was added, 
+//     A function returning a list of Maps with attributes id, name, and namespace, one Map per bundle.
 
-    try {
-        httpGet(params) { resp ->
-            if(resp!= null) {
-               int i = 0
-               String delim = ""
-               i = resp.data.read() 
-               while (i != -1){
-                       char c =  (char) i
-                       delim+=c
-                       i = resp.data.read()
-                       if(i < 0 || i > 255) break
-               } 
-                Map de = [:]
-                delim.findAll(/href="\/bundle\/editor\/(\d*)" title="(.*)"/) {f, k,v -> de[k] = v}
-                HEid = de.find{ it.value == bundleName }?.key
-            }
-            else {
-                log.error "Null Response"
-                return false
-            }
-        }
-    } catch (exception) {
-        log.error "Read Ext Error: ${exception.message}"
-        return false;
+    if (location.hub.firmwareVersionString >= "2.3.2") { 
+    	  def gIB = getInstalledBundlesList()
+    	  HEid = gIB.findAll{it.name == bundleName}.id[0]
+    }
+    else 
+    {
+    	  def params = [
+    	      uri: "http://127.0.0.1:8080/bundle/list",
+    	      contentType: "text/html",
+    	      textParser: true,
+    	      headers: ["Cookie": cookie]                   
+    	  ]
+	  
+    	  try {
+    	      httpGet(params) { resp ->
+    	          if(resp!= null) {
+    	             int i = 0
+    	             String delim = ""
+    	             i = resp.data.read() 
+    	             while (i != -1){
+    	                     char c =  (char) i
+    	                     delim+=c
+    	                     i = resp.data.read()
+    	                     if(i < 0 || i > 255) break
+    	             } 
+    	              Map de = [:]
+    	              delim.findAll(/href="\/bundle\/editor\/(\d*)" title="(.*)"/) {f, k,v -> de[k] = v}
+    	              HEid = de.find{ it.value == bundleName }?.key
+    	          }
+    	          else {
+    	              log.error "Null Response"
+    	              return false
+    	          }
+    	      }
+    	  } catch (exception) {
+    	      log.error "Read Ext Error: ${exception.message}"
+    	      return false;
+    	  }
     }
 
-
-
-// actual delete of the Bundle using the HEid found above
+// let's delete the Bundle's HEid found above.
 	try {
 		params = [
 			uri: "http://127.0.0.1:8080",
@@ -3744,7 +3753,7 @@ def rollback(error, runInBackground) {
 	installAction = null
 	completedActions = null
 	manifestForRollback = null
-	return triggerError("Error Occurred During Installation", "An error occurred while installing the package: ${error}.", runInBackground)
+	return triggerError("Error Occurred During Installation", "An error occurred while installing the package: ${error}.\n\nBe sure the package is not in use with devices.", runInBackground)
 }
 
 def loadSettingsFile() {
