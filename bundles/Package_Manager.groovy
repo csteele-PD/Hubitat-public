@@ -3580,22 +3580,19 @@ def installBundle(bundleLocation) {
 	return false
 }
 
-/*
-	Web Scraping courtesy of: "thebearmay",  "Jean P. May, Jr." per Apache v2 license.
-*/
 def uninstallBundle(bundleName) {
 // Bundles don't return an ID when added, the ID has to be extracted by scraping /bundles/list 
 
 // in platform v2.3.2 getInstalledBundlesList() was added, 
 //     A function returning a list of Maps with attributes id, name, and namespace, one Map per bundle.
 
-    if (location.hub.firmwareVersionString >= "2.3.2") { 
-    	  def gIB = getInstalledBundlesList()
-    	  HEid = gIB.findAll{it.name == bundleName}.id[0]
+    if (location.hub.firmwareVersionString >= "2.3.2.120") { 
+    	  HEid = getInstalledBundlesList().findAll{it.name == bundleName}.id[0]
     }
     else 
     {
-    	  def params = [
+	  def gIB = []
+        def params = [
     	      uri: "http://127.0.0.1:8080/bundle/list",
     	      contentType: "text/html",
     	      textParser: true,
@@ -3604,21 +3601,15 @@ def uninstallBundle(bundleName) {
 	  
     	  try {
     	      httpGet(params) { resp ->
-    	          if(resp!= null) {
-    	             int i = 0
-    	             String delim = ""
-    	             i = resp.data.read() 
-    	             while (i != -1){
-    	                     char c =  (char) i
-    	                     delim+=c
-    	                     i = resp.data.read()
-    	                     if(i < 0 || i > 255) break
-    	             } 
-    	              Map de = [:]
-    	              delim.findAll(/href="\/bundle\/editor\/(\d*)" title="(.*)"/) {f, k,v -> de[k] = v}
-    	              HEid = de.find{ it.value == bundleName }?.key
-    	          }
-    	          else {
+			if(resp!= null) {
+				def matcherText = resp.data.text.replace("\n","").replace("\r","")
+				def matcher = matcherText.findAll(/(<tr class="bundle-row" data-bundle-id="[^<>]+">.*?<\/tr>)/).each {
+					def allFields = it.findAll(/(<td .*?<\/td>)/) // { match,f -> return f }
+					def id = it.find(/data-bundle-id="([^"]+)"/) { match,i -> return i.trim() }
+					def name = allFields[0].find(/title="([^"]+)/) { match,t -> return t.trim() }
+					gIB += [id:id,name:name]
+    	          		}
+    	         } else {
     	              log.error "Null Response"
     	              return false
     	          }
@@ -3627,7 +3618,10 @@ def uninstallBundle(bundleName) {
     	      log.error "Read Ext Error: ${exception.message}"
     	      return false;
     	  }
+
+    	  HEid = gIB.findAll{it.name == bundleName}.id[0]
     }
+ 
 
 // let's delete the Bundle's HEid found above.
 	try {
