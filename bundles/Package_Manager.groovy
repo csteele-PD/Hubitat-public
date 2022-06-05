@@ -3760,8 +3760,7 @@ def installHPMManifest() {
 		createLocationVariable("hpmVersion")
 		sendLocationEvent(name: "hpmVersion", value: "0")
 	}
-	// there should be one HPM Manifest. Remove all and add just one back in.
-	state.manifests = state.manifests.findAll { it.value.packageName != "Hubitat Package Manager" }
+
 	if (state.manifests[state.repositoryListingJSON.hpm.location] == null) {
 		logDebug "Grabbing list of installed apps"
 		if (!login()) {
