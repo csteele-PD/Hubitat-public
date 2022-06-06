@@ -1,6 +1,6 @@
 /**
  *
- *  Hubitat Package Manager v1.8.5
+ *  Hubitat Package Manager v1.8.6
  *
  *  Copyright 2020 Dominick Meglio
  *
@@ -9,6 +9,7 @@
  *
  *
  *
+ *    csteele v1.8.6     Un-Match added.
  *    csteele v1.8.5     Bundles support added.
  *    csteele v1.8.4     Migrated to HubitatCommunity
  *                         added txtEnable to silence log.info messages
@@ -19,7 +20,7 @@
  *                         added feature to identify Azure search vs sql search.
  */
  
-	public static String version()      {  return "v1.8.5"  }
+	public static String version()      {  return "v1.8.6"  }
 	def getThisCopyright(){"&copy; 2020 Dominick Meglio"}
 
 
@@ -64,6 +65,9 @@ preferences {
 	page(name: "prefPkgMatchUpVerify")
 	page(name: "prefPkgMatchUpComplete")
 	page(name: "prefPkgView")
+	page(name: "prefPkgUnMatch")
+	page(name: "prefPkgUnMatchVerify")
+	page(name: "prefPkgUnMatchComplete")
 }
 
 import groovy.transform.Field
@@ -138,6 +142,9 @@ def appButtonHandler(btn) {
 		case "btnAddRepo":
 			state.customRepo = true
 			break
+		case "btnUnMatch":
+			state.UnMatch = true
+			break
 		case ~/^btnDeleteRepo(\d+)/:
 			deleteCustomRepository(Matcher.lastMatcher[0][1].toInteger())
 			break
@@ -208,6 +215,8 @@ def prefOptions() {
 }
 
 def prefSettings(params) {
+	if (state.UnMatch)
+		return prefPkgUnMatch()
 	def showSettingsForSecurityEnablement = false
 	state.newRepoMessage = ""
 	if (state.manifests == null)
@@ -232,7 +241,7 @@ def prefSettings(params) {
 		return dynamicPage(name: "prefSettings", title: "", nextPage: "prefOptions", install: showInstall, uninstall: false) {
 			displayHeader()
 			
-			section ("Hub Security") {
+			section ("<b>Hub Security</b>") {
 				if (showSettingsForSecurityEnablement) {
 					paragraph "<b>Hub Security appears to be enabled on your hub but is not enabled within HPM. Please configure hub security below</b>"
 				}
@@ -252,7 +261,8 @@ def prefSettings(params) {
 					input "txtEnable", "bool", title: "Enable text logging", defaultValue: true
 					input "includeBetas", "bool", title: "When updating, install pre-release versions. Note: Pre-releases often include more bugs and should be considered beta software"
 				}
-				section ("Package Updates") {
+				section {
+					paragraph "<p><hr></p><b>Package Updates</b>"
 					input "updateCheckTime", "time", title: "Specify what time update checking should be performed", defaultValue: "00:00", required: true        
 
 					input "notifyUpdatesAvailable", "bool", title: "Notify me when updates are available", submitOnChange: true
@@ -282,13 +292,14 @@ def prefSettings(params) {
 						input "notifyIncludeHubName", "bool", title: "Include hub name in notifications", defaultValue: false
 					if (notifyOnSuccess || notifyOnFailure)
 						input "notifySpecificPackages", "bool", title: "Send notifications for each specific package", defaultValue: false
+					paragraph "<hr>"
 				}
 				def reposToShow = [:]
 				state.repositoryListingJSON.repositories.each { r -> reposToShow << ["${r.location}":r.name] }
 				if (state.customRepositories != null)
 					state.customRepositories.each { r -> reposToShow << ["${r.key}":r.value] }
 				reposToShow = reposToShow.sort { r -> r.value }
-				section ("Repositories")
+				section ("<b>Repositories</b>")
 				{
 					input "installedRepositories", "enum", title: "Available repositories", options: reposToShow, multiple: true, required: true
 
@@ -305,6 +316,11 @@ def prefSettings(params) {
 						input "btnAddRepo", "button", title: "Add a Custom Repository", submitOnChange: false
 					if (state.customRepo)
 						input "customRepo", "text", title: "Enter the URL of the repository's directory listing file", required: true
+					paragraph "<hr>"
+				}
+				section ("<b>Un-Match a Package</b>") {
+					paragraph "Un-Match an existing app or driver"
+					input "btnUnMatch", "button", title: "Remove a Matched Package"
 				}
 			}
 		}
@@ -390,7 +406,7 @@ def prefInstallRepositorySearchResults() {
 		def searchResults = []
 		for (repo in result.data.repositories) {
 			for (packageItem in repo.packages) {
-				if (settings?.srchMethod  != false) {
+				if (settings?.srchMethod != false) {
 					def pkg_tags = packageItem.tags[1..-2].tokenize(',')	// -- CSteele
 					packageItem.tags = pkg_tags 		// -- CSteele
 				}
@@ -2483,6 +2499,87 @@ def prefPkgMatchUpComplete() {
 	}
 }
 
+def prefPkgUnMatch() {
+	if (state.mainMenu)
+		return prefOptions()
+	state.remove("UnMatch")
+	logDebug "prefPkgUnMatch"
+	
+	def pkgsToList = getInstalledPackages(false)
+
+	return dynamicPage(name: "prefPkgUnMatch", title: "", nextPage: "prefPkgUnMatchVerify", install: false, uninstall: false) {
+		displayHeader()
+		section {
+			paragraph "<b>Package UnMatch</b>"
+			input "pkgUnMatch", "enum", title: "Choose packages to un-match", required: true, multiple: true, options: pkgsToList
+		}
+		section {
+//			input "btnMainMenu", "button", title: "Main Menu", width: 3
+		}
+	}
+}
+
+def prefPkgUnMatchVerify() {
+	if (state.mainMenu)
+		return prefOptions()
+	logDebug "prefPkgUnMatchVerify"
+	
+	return dynamicPage(name: "prefPkgUnMatchVerify", title: "", nextPage: "prefPkgUnMatchComplete", install: false, uninstall: false) {
+		displayHeader()
+		section {
+			paragraph "<b>Un-Match Confirm</b>"
+			paragraph "The following packages will be Un-Matched:"
+			
+			def str = "<ul>"
+			for (pkgToUnM in pkgUnMatch) {
+				def pkg = state.manifests[pkgToUnM]
+				for (app in pkg.apps) {
+					if (app.heID != null)
+						str += "<li>${app.name} (App)</li>"
+				}
+				
+				for (driver in pkg.drivers) {
+					if (driver.heID != null)
+						str += "<li>${driver.name} (Device Driver)</li>"
+				}
+
+				for (bundle in pkg.bundles) {
+					if (bundle.name != null)
+						str += "<li>${bundle.name} (Bundle)</li>"
+				}
+			}
+			str += "</ul>"
+			paragraph str
+			paragraph "Please be sure to follow this with a Match Up. Click Next to continue."
+		}
+		section {
+			paragraph "<hr>"
+			input "btnMainMenu", "button", title: "Main Menu", width: 3
+		}
+	}
+}
+
+def prefPkgUnMatchComplete() {
+	if (state.mainMenu)
+		return prefOptions()
+	logDebug "prefPkgUnMatchComplete"
+	
+	for (pkgToUnM in pkgUnMatch) {
+		state.manifests.remove(pkgToUnM)
+	}
+	
+	return dynamicPage(name: "prefPkgUnMatchComplete", title: "", install: true, uninstall: false) {
+		displayHeader()
+		section {
+			paragraph "<b>Un-Match Complete</b>"
+		}
+		section {
+			paragraph "<hr>"
+			input "btnMainMenu", "button", title: "Main Menu", width: 3
+		}
+	}
+}
+
 def prefPkgView() {
 	if (state.mainMenu)
 		return prefOptions()
@@ -2672,6 +2769,7 @@ def clearStateSettings(clearProgress) {
 	packagesMatchingInstalledEntries = []
 	optionalItemsToShow = [:]
 	state.customRepo = false
+	state.remove("UnMatch")
 	app.removeSetting("customRepo")
 	if (clearProgress) {
 		statusMessage = ""
@@ -3580,6 +3678,7 @@ def installBundle(bundleLocation) {
 	return false
 }
 
+
 def uninstallBundle(bundleName) {
 // Bundles don't return an ID when added, the ID has to be extracted by scraping /bundles/list 
 
@@ -3622,7 +3721,6 @@ def uninstallBundle(bundleName) {
     	  HEid = gIB.findAll{it.name == bundleName}.id[0]
     }
  
-
 // let's delete the Bundle's HEid found above.
 	try {
 		params = [
@@ -3642,7 +3740,7 @@ def uninstallBundle(bundleName) {
 	catch (e) {
 		log.error "Error uninstalling file: ${e}"
 	}
-	return false
+	return false 
 }
 
 def setBackgroundStatusMessage(msg) {
@@ -3777,6 +3875,7 @@ def installHPMManifest() {
 		}
 		def appId = appsInstalled.find { i -> i.title == "Hubitat Package Manager" && i.namespace == "dcm.hpm"}?.id
 		if (appId != null) {
+//	state.manifests = state.manifests.findAll { it.value.packageName != "Hubitat Package Manager" }
 			manifest.apps[0].heID = appId
 			state.manifests[state.repositoryListingJSON.hpm.location] = manifest
 			minimizeStoredManifests()
