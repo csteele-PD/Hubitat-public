@@ -2,8 +2,8 @@
   "packageName": "EtherRain",
   "author": "csteele",
   "dateReleased": "2022-06-09",
-  "releaseNotes": "Initial Release",
-  "documentationLink": "",
+  "releaseNotes": "Initial Release use with http://www.lawncheck.com/",
+  "documentationLink": "http://www.quicksmart.com/qs_etherrain.html",
   "communityLink": "",
   "drivers": [
     {
