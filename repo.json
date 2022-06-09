@@ -70,7 +70,7 @@
    		"name": "EtherRain",
    		"id": "026cd1b9-b963-4852-80a5-07328d34d4d7",
    		"category": "Control",
-   		"tags": ["Temperature & Humidity"],
+   		"tags": ["Irrigation", "LAN", "Timers", "Valves", "Water"],
    		"location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/EtherRain/packageManifest.json",
    		"description": "EtherRain Sprinkler Controller and child Driver"
    	}
