@@ -12,7 +12,7 @@
       "name": "EtherRain 8 Valves",
       "namespace": "csteele",
       "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/EtherRain/EtherRain-8-Valves.groovy",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "oauth": false,
       "primary": true,
       "required": true
@@ -22,7 +22,7 @@
       "name": "EtherRain Device (Child)",
       "namespace": "csteele",
       "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/EtherRain/EtherRain-Child-Device.groovy",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "oauth": false,
       "primary": false,
       "required": true
