@@ -8,7 +8,7 @@
   "drivers": [
     {
       "id": "ba47846f-4e38-40c3-ab36-9e6deac7b15",
-      "name": "EtherRain Valves",
+      "name": "EtherRain 8 Valves",
       "namespace": "csteele",
       "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/EtherRain/EtherRain-8-Valves.groovy",
       "version": "1.0.0",
@@ -18,7 +18,7 @@
     },
     {
       "id": "b5fa5658-9b97-4b66-b5c2-5c718c0ce47e",
-      "name": "EtherRain device",
+      "name": "EtherRain Device (Child)",
       "namespace": "csteele",
       "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/EtherRain/EtherRain-Child-Device.groovy",
       "version": "1.0.0",
