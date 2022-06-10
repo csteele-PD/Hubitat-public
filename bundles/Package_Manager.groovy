@@ -10,6 +10,8 @@
  *
  *
  *    csteele v1.8.6     Un-Match added.
+ *                         moved Bundles before Apps/Drivers for Install and Repair.
+ *                         included Bundles into modify.
  *    csteele v1.8.5     Bundles support added.
  *    csteele v1.8.4     Migrated to HubitatCommunity
  *                         added txtEnable to silence log.info messages
@@ -75,8 +77,8 @@ import java.util.regex.Matcher
 
 @Field static String repositoryListing = "https://raw.githubusercontent.com/HubitatCommunity/hubitat-packagerepositories/master/repositories.json"
 @Field static String settingsFile      = "https://raw.githubusercontent.com/HubitatCommunity/hubitat-packagerepositories/master/settings.json"
-@Field static String searchFuzzyApiUrl = "https://hubitatpackagemanager.azurewebsites.net/graphql"  // -- CSteele
-@Field static String searchFastApiUrl  = "https://hubitatpackagemanager.hubitatcommunity.com/searchHPMpkgs2.php"  // -- CSteele
+@Field static String searchFuzzyApiUrl = "https://hubitatpackagemanager.azurewebsites.net/graphql"
+@Field static String searchFastApiUrl  = "https://hubitatpackagemanager.hubitatcommunity.com/searchHPMpkgs2.php"
 @Field static List categories = [] 
 @Field static List allPackages = []
 @Field static def completedActions = [:]
@@ -104,8 +106,8 @@ import java.util.regex.Matcher
 @Field static List packagesMatchingInstalledEntries = []
 
 @Field static List iconTags = ["ZWave", "Zigbee", "Cloud", "LAN"]
-@Field static String srchSrcTxt = ""  // -- CSteele
-@Field static String searchApiUrl = ""	// -- CSteele
+@Field static String srchSrcTxt = ""
+@Field static String searchApiUrl = ""
 
 def installed() {
 	initialize()
@@ -319,7 +321,7 @@ def prefSettings(params) {
 					paragraph "<hr>"
 				}
 				section ("<b>Un-Match a Package</b>") {
-					paragraph "Un-Match an existing app or driver"
+					paragraph "Un-Match selected Apps or Drivers by removing the cached manifest. Follow this step with a Match Up to install the latest Manifest. This feature is best used by experienced users. Or when instructed by the owner of a Package due to a change they made in their Manifest structure."
 					input "btnUnMatch", "button", title: "Remove a Matched Package"
 				}
 			}
@@ -356,20 +358,20 @@ def prefInstallRepositorySearch() {
 	state.remove("back")
 	logDebug "prefInstallRepositorySearch"
 	installMode = "search"
-	searchApiUrl = searchFuzzyApiUrl    // -- CSteele
-	srchSrcTxt = "Fuzzy"     // -- CSteele
+	searchApiUrl = searchFuzzyApiUrl  
+	srchSrcTxt = "Fuzzy"   
 	if (settings?.srchMethod != false) { 
 		srchSrcTxt = "Fast" 
 		searchApiUrl = searchFastApiUrl
-	} // -- CSteele
+	}
 
 	return dynamicPage(name: "prefInstallRepositorySearch", title: "", nextPage: "prefInstallRepositorySearchResults", install: false, uninstall: false) {
 		displayHeader()
 		section {
-			paragraph "<b>Search</b> by $srchSrcTxt"	// -- CSteele
+			paragraph "<b>Search</b> by $srchSrcTxt"
 			input "pkgSearch", "text", title: "Enter your search criteria", required: true
-			paragraph "<b>Search Method - Fast or Fuzzy Search</b>"	// -- CSteele
-			input "srchMethod", "bool", title: "Fast Search", defaultValue: true, submitOnChange: true	// -- CSteele
+			paragraph "<b>Search Method - Fast or Fuzzy Search</b>"
+			input "srchMethod", "bool", title: "Fast Search", defaultValue: true, submitOnChange: true
 			paragraph "<hr>"
 			input "btnMainMenu", "button", title: "Main Menu", width: 3
 		}
@@ -407,8 +409,8 @@ def prefInstallRepositorySearchResults() {
 		for (repo in result.data.repositories) {
 			for (packageItem in repo.packages) {
 				if (settings?.srchMethod != false) {
-					def pkg_tags = packageItem.tags[1..-2].tokenize(',')	// -- CSteele
-					packageItem.tags = pkg_tags 		// -- CSteele
+					def pkg_tags = packageItem.tags[1..-2].tokenize(',')
+					packageItem.tags = pkg_tags
 				}
 				packageItem << [author: repo.author, gitHubUrl: repo.gitHubUrl, payPalUrl: repo.payPalUrl, installed: state.manifests[packageItem.location] != null]
 				searchResults << packageItem
@@ -419,7 +421,7 @@ def prefInstallRepositorySearchResults() {
 			displayHeader()
 			
 			section {
-				paragraph "<b>Search Results for ${pkgSearch}</b> by $srchSrcTxt Search"	// -- CSteele
+				paragraph "<b>Search Results for ${pkgSearch}</b> by $srchSrcTxt Search"
 				addCss()
 			}    
 			section {
@@ -815,6 +817,27 @@ def performInstallation() {
 
 	initializeRollbackState("install")
 	// All files downloaded, execute installs.
+	for (bundleToInstall in requiredBundles) {					// required = true
+		def location = getItemDownloadLocation(bundleToInstall.value)
+		setBackgroundStatusMessage("Installing ${bundleToInstall.value.name}") // from $location")
+		if (!installBundle(location)) {
+			state.manifests.remove(pkgInstall)
+			return rollback("Failed to install bundle ${bundleToInstall.value.name} using ${location}. Please notify the package developer.", false)
+		}
+	}
+
+	for (bundleToInstall in bundlesToInstall) {					// required = false (aka optional)
+		def matchedBundle = manifest.bundles.find { it.id == bundleToInstall}
+		if (matchedBundle != null) {
+			def location = getItemDownloadLocation(matchedBundle)
+			setBackgroundStatusMessage("Installing ${matchedBundle.name} from $location")
+			if (!installBundle(location)) {
+				state.manifests.remove(pkgInstall)
+				return rollback("Failed to install bundle ${matchedBundle.name} using ${location}. Please notify the package developer.", false)
+			}
+		}
+	}
+
 	for (requiredApp in requiredApps) {							// required = true
 		def location = getItemDownloadLocation(requiredApp.value)
 		setBackgroundStatusMessage("Installing ${requiredApp.value.name}")
@@ -885,26 +908,6 @@ def performInstallation() {
 			completedActions["fileInstalls"] << fileToInstall
 	}
 
-	for (bundleToInstall in requiredBundles) {					// required = true
-		def location = getItemDownloadLocation(bundleToInstall.value)
-		setBackgroundStatusMessage("Installing ${bundleToInstall.value.name}") // from $location")
-		if (!installBundle(location)) {
-			state.manifests.remove(pkgInstall)
-			return rollback("Failed to install bundle ${bundleToInstall.value.name} using ${location}. Please notify the package developer.", false)
-		}
-	}
-
-	for (bundleToInstall in bundlesToInstall) {					// required = false (aka optional)
-		def matchedBundle = manifest.bundles.find { it.id == bundleToInstall}
-		if (matchedBundle != null) {
-			def location = getItemDownloadLocation(matchedBundle)
-			setBackgroundStatusMessage("Installing ${matchedBundle.name} from $location")
-			if (!installBundle(location)) {
-				state.manifests.remove(pkgInstall)
-				return rollback("Failed to install bundle ${matchedBundle.name} using ${location}. Please notify the package developer.", false)
-			}
-		}
-	}
 	atomicState.backgroundActionInProgress = false
 }
 
@@ -1152,6 +1155,17 @@ def performModify() {
 	}
 	
 	initializeRollbackState("modify")
+	for (bundleToInstall in bundlesToInstallForModify) {
+		def location = getItemDownloadLocation(bundleToInstall)
+		def bundleContents = bundleToInstall[location]
+		setBackgroundStatusMessage("Installing ${location}")
+		if (!installBundle(location)) {
+			return rollback("Failed to install bundle ${location}. Please notify the package developer.", false)
+		}
+		else
+			completedActions["bundleInstalls"] << bundleToInstall
+	}
+
 	for (appToInstall in appsToInstallForModify) {
 		def app = getAppById(manifest, appToInstall)
 		def location = getItemDownloadLocation(app)
@@ -1202,6 +1216,17 @@ def performModify() {
 		else
 			return rollback("Failed to uninstall driver ${driver.name}. Please delete all instances of this device before uninstalling the package.", false)
 	}
+
+	for (bundleToUninstall in bundlesToInstallForModify) {
+		setBackgroundStatusMessage("Uninstalling ${bundleToUninstall.name}")
+		if (uninstallBundle(bundleToUninstall.name)) {
+			completedActions["bundleUninstalls"] << bundle
+		}
+		else {
+			return rollback("Failed to uninstall bundle ${bundleToUninstall.name}.", false)
+		}
+	}
+
 	atomicState.backgroundActionInProgress = false
 }
 
@@ -1332,6 +1357,17 @@ def performRepair() {
 		initializeRollbackState("update")
 		
 		manifestForRollback = installedManifest
+		for (bundleToInstall in manifest.bundles) {
+			def location = getItemDownloadLocation(bundleToInstall)
+			def bundleContents = bundleFiles[location]
+			setBackgroundStatusMessage("Installing ${location}")
+			if (!installBundle(location)) {
+				return rollback("Failed to install bundle ${location}. Please notify the package developer.", false)
+			}
+			else
+				completedActions["bundleInstalls"] << bundleToInstall
+		}
+
 		for (app in manifest.apps) {
 			def appHeID = getAppById(installedManifest,app.id)?.heID
 			if (isAppInstalled(installedManifest,app.id) && installedApps.find { it -> it.id == appHeID }) {
@@ -1399,17 +1435,6 @@ def performRepair() {
 			}
 			else
 				completedActions["fileInstalls"] << fileToInstall
-		}
-
-		for (bundleToInstall in manifest.bundles) {
-			def location = getItemDownloadLocation(bundleToInstall)
-			def bundleContents = bundleFiles[location]
-			setBackgroundStatusMessage("Installing ${location}")
-			if (!installBundle(location)) {
-				return rollback("Failed to install bundle ${location}. Please notify the package developer.", false)
-			}
-			else
-				completedActions["bundleInstalls"] << bundleToInstall
 		}
 
 		if (state.manifests[pkgRepair] != null)
@@ -1567,6 +1592,7 @@ def performUninstall() {
 				return rollback("Failed to uninstall bundle ${bundle.name}.", false)
 			}
 		}
+
 		state.manifests.remove(pkgToUninstall)
 	}
 	
@@ -2070,6 +2096,17 @@ def performUpdates(runInBackground) {
 			if (manifest.betaVersion && includeBetas)
 				manifest.beta = true
 			
+			for (bundleToInstall in manifest.bundles) {
+				def location = getItemDownloadLocation(bundleToInstall)
+				def bundleContents = bundleFiles[location]
+				setBackgroundStatusMessage("Installing ${location}")
+				if (!installBundle(location)) {
+					return rollback("Failed to install bundle ${location}. Please notify the package developer.", false)
+				}
+				else
+					completedActions["bundleInstalls"] << bundleToInstall
+			}
+
 			for (app in manifest.apps) {
 				if (isAppInstalled(installedManifest,app.id)) {
 					if (shouldUpgrade(pkg, app.id)) {
@@ -2225,17 +2262,6 @@ def performUpdates(runInBackground) {
 				}
 				else
 					completedActions["fileInstalls"] << fileToInstall
-			}
-
-			for (bundleToInstall in manifest.bundles) {
-				def location = getItemDownloadLocation(bundleToInstall)
-				def bundleContents = bundleFiles[location]
-				setBackgroundStatusMessage("Installing ${location}")
-				if (!installBundle(location)) {
-					return rollback("Failed to install bundle ${location}. Please notify the package developer.", false)
-				}
-				else
-					completedActions["bundleInstalls"] << bundleToInstall
 			}
 
 			if (state.manifests[pkg] != null)
@@ -3055,7 +3081,7 @@ def getJSONAsyncResult(resp, data) {
 
 def getOptionalAppsFromManifest(manifest) {
 	def appsList = [:]
-	for (app in manifest.apps) {
+	for (app in manifest?.apps) {
 		if (app.required == false)
 			appsList << ["${app.id}":app.name]
 	}
@@ -3064,7 +3090,7 @@ def getOptionalAppsFromManifest(manifest) {
 
 def getOptionalDriversFromManifest(manifest) {
 	def driversList = [:]
-	for (driver in manifest.drivers) {
+	for (driver in manifest?.drivers) {
 		if (driver.required == false)
 			driversList << ["${driver.id}":driver.name]
 	}
@@ -3073,7 +3099,7 @@ def getOptionalDriversFromManifest(manifest) {
 
 def getOptionalBundlesFromManifest(manifest) {
 	def bundlesList = [:]
-	for (bundle in manifest.bundles) {
+	for (bundle in manifest?.bundles) {
 		if (bundle.required == false)
 			bundlesList << ["${bundle.id}":bundle.name]
 	}
