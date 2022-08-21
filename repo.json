@@ -73,6 +73,14 @@
    		"tags": ["Irrigation", "LAN", "Timers", "Valves", "Water"],
    		"location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/EtherRain/packageManifest.json",
    		"description": "EtherRain Sprinkler Controller and child Driver"
+   	},
+      {
+   		"name": "AverageThis",
+   		"id": "245d904c-d8a4-4c35-8788-6fb5f8962335",
+   		"category": "Control",
+   		"tags": ["Energy Monitoring", "Monitoring", "Appliances"],
+   		"location": "https://raw.githubusercontent.com/HubitatCommunity/AverageThis/master/docs/AverageThis.json",
+   		"description": "Calculates a Rolling Average of Illuminance, Temperature and Relative Humidity from a set of Omni Sensors into a virtual sensor of your choice."
    	}
    ]
 }
