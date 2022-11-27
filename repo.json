@@ -8,7 +8,8 @@
    		"category": "Control",
    		"tags": ["Lights & Switches"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/AeotecMultiSensor6/master/docs/AeotecMultiSensor6.json",
-   		"description": "A more preference filled alternative to the Built-In driver."
+			"description": "A more preference filled alternative to the Built-In driver.",
+			"descriptive": "<ul><li>Temperature Change Amount (Tenths of a degree)?The tenths of degrees the temperature must change to induce an automatic report.</li><li>Humidity Change Amount (%)?The percentage the humidity must change to induce an automatic report.</li><li>Luminance Change Amount (LUX)?The amount of LUX the luminance must change to induce an automatic report.</li><li>Temperature Offset?-128 to +127 (Tenths of a degree)If your temperature is inaccurate this will offset/adjust it by this many tenths of a degree.</li><li>Humidity Offset/Adjustment -50 to +50 in percent?If your humidity is inaccurate this will offset/adjust it by this percent.</li><li>Luminance Offset/Adjustment -10 to +10 in LUX?If your luminance is inaccurate this will offset/adjust it by this percent.</li></ul>"
    	},
    	{
    		"name": "HoneywellThermo-TCC Driver",
