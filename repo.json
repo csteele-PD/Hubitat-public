@@ -67,6 +67,7 @@
    		"tags": ["Temperature & Humidity"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/HoneywellThermoParent/main/docs/HoneywellThermoParent.json",
    		"description": "A Parent/child version of the original"
+   		"descriptive": "<ul><li>Supports multiple Honeywell WiFi Thermostats under a single TCC id with each child thermostat operating independently.</li><li>Supports Honeywell's entre level thermostats such as the Honeywell Home Wi-Fi 7-Day Programmable Thermostat (RTH6580WF)</li><li>This integration makes a Cloud connection to Honeywell's Total Connect Comfort (TCC). </li><li>This driver, alone, provides control access (setpoints) to the Thermostat. The Thermostat's built-in scheduler can be adequate for most users.</li><li>Can be combined with Hubitat's Thermostat Controller and/or Hubitat's Thermostat Scheduler.</li></ul>"
    	},
       {
    		"name": "EtherRain",
@@ -83,6 +84,7 @@
    		"tags": ["Energy Monitoring", "Monitoring", "Appliances"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/AverageThis/master/docs/AverageThis.json",
    		"description": "Calculates a Rolling Average of Illuminance, Temperature and Relative Humidity from a set of Omni Sensors into a virtual sensor of your choice."
+	        "descriptive": "<ul><li>Aggregates sensor data into one virtual sensor that can then be used in automations. </li><li>Supports two Child types: multisensor or power.</li></ul>"
    	}
    ]
 }
