@@ -17,7 +17,8 @@
    		"category": "Control",
    		"tags": ["Temperature & Humidity"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/HoneywellThermo-TCC/master/docs/HoneywellThermo-TCC.json",
-   		"description": "Integrate Honeywell's Total Comfort Control for your WiFi Thermostat."
+   		"description": "Integrate Honeywell's Total Comfort Control for your WiFi Thermostat.",
+		"descriptive": "<ul><li>Supports Honeywell's entre level thermostats such as the Honeywell Home Wi-Fi 7-Day Programmable Thermostat (RTH6580WF)</li><li>This integration makes a Cloud connection to Honeywell's Total Connect Comfort (TCC). </li><li>This driver, alone, provides control access (setpoints) to the Thermostat. The Thermostat's built-in scheduler can be adequate for most users.</li><li>Can be combined with Hubitat's Thermostat Controller and/or Hubitat's Thermostat Scheduler.</li></ul>"
    	},
    	{
    		"name": "Hubitat-BetterLaundryMonitor",
