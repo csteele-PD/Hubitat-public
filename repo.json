@@ -50,7 +50,8 @@
    		"category": "Control",
    		"tags": ["Tools & Utilities"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/GetAttributeApp/master/docs/GetAttributeApp.json",
-   		"description": "Display a device's Capabilities, Attributes and Commands."
+			"description": "Display a device's Capabilities, Attributes and Commands.",
+			"descriptive": "<ul><li>Select one or more devices and have Capabilities, Attributes and Commands displayed and compare.</li><li>Very useful as a starting point for custom coding based on existing drivers.</li></ul>"
    	},
       {
    		"name": "Air Quality from AirNow",
