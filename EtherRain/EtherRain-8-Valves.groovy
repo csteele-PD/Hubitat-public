@@ -19,9 +19,11 @@
  */
  
  
-public static String version()      {  return "v1.0.0"  }
+public static String version()      {  return "v1.0.2"  }
 
 /***********************************************************************************************************************
+ *         v1.0.2     use debugOutput to filter logs
+ *                  fixed typo for closed 
  * Version: 1.0.0
  *
  */
@@ -33,7 +35,6 @@ metadata
 		capability "Actuator"
 		capability "Refresh"
 
-//		command "deleteChildren"			// **---** delete for Release
 		command "recreateChildDevices"
 	}
 
@@ -83,11 +84,17 @@ void parse(String description)
 }
 
 
+/*
+	---=---=---=---=---=---=---=---=---
+	Parent code section
+	---=---=---=---=---=---=---=---=---
+
+*/
 void valveSet(options) {	
 	def params = [
 	    uri: "http://$etherrainip/result.cgi?lu=${settings.username}&lp=${settings.password}$options",
 		headers: [
-	        'Accept': '*/*',
+	        'Accept': '*/*', // */
 	        'DNT': '1',
 	        'Cache' : 'false',
 	        'Accept-Encoding': 'plain',
@@ -114,10 +121,15 @@ void valveSetHandler(resp, data) {
 		state.erRstate = (resp.data =~ "rz: (..)")[0][1] // result (reZult)
 		//if (debugOutput) log.debug "states: $state.erOstate $state.erCstate $state.erRstate" 
 		translateStatus() 
-	} else { log.error "EtherRain api did not return data" }
+	} else { log.error "EtherRain api did not return data. Check Username, PW and IP address." }
 }
 
 
+/*
+	getStatus
+    
+	get status codes from EtherRain and decode/translate them to human readable.
+*/
 void getStatus() {
 	if (debugOutput) log.debug "Executing getStatus"
 	if (debugOutput) log.debug "http://$etherrainip/direct.cgi?lu=${settings.username}&lp=${settings.password}&xd=-:-:-:-:-:-:-:-"
@@ -125,7 +137,7 @@ void getStatus() {
 	def params = [
 	    uri: "http://$etherrainip/direct.cgi?lu=${settings.username}&lp=${settings.password}&xd=-:-:-:-:-:-:-:-",
 	    headers: [
-	        'Accept': '*/*',
+	        'Accept': '*/*', // */
 	        'DNT': '1',
 	        'Cache' : 'false',
 	        'Accept-Encoding': 'plain',
@@ -157,6 +169,36 @@ void statusHandler(resp, data) {
 
 
 /*
+	on
+    
+	Parent UI button turns the device on.
+*/
+void open()
+{
+	if (descTextEnable) log.info "EtherRain: $description Opened $id"
+	
+}
+
+
+/*
+	off
+    
+	Parent UI button turns the device off.
+*/
+void close()
+{
+	if (descTextEnable) log.info "EtherRain: $description Closed $id"
+}
+
+
+/*
+	---=---=---=---=---=---=---=---=---
+	Child code section
+	---=---=---=---=---=---=---=---=---
+
+*/
+
+/*
 	open
     
 	Child opens the valve.
@@ -176,7 +218,7 @@ void open(id, valveTimer)
 		//   add igateDelay and valve time to now
  		state.cycleInUse = localeMillis + ((valveTimer.toInteger() + igateDelay.toInteger()) * 60000)
 	}
-	log.debug "localeMillis: $localeMillis, $valveTimer, $igateDelay"
+	if (debugOutput) log.debug "localeMillis: $localeMillis, $valveTimer, $igateDelay"
 
 
 	def valveBase = [1:0, 2:0, 3:0, 4:0, 5:0, 6:0, 7:0, 8:0]
@@ -186,8 +228,8 @@ void open(id, valveTimer)
 	valveBase.each { k, v -> state.valves += ":$v" }	
 
 	valveSet("&xi=${state.valves}") // what to append to the URI
-	childDevice.parse([name:"valve$id", value:"on", descriptionText:"${childDevice.displayName} was turned on"])
-	sendEvent(name: childDevice, value:"on") 
+	childDevice.parse([name:"valve", value:"open", descriptionText:"${childDevice.displayName} was Opened"])
+	sendEvent(name: childDevice, value:"open")    // report an Event in Parent, report Valve event in child.
 }
 
 
@@ -202,9 +244,9 @@ void close(id, valveTimer)
 	if (debugOutput) log.debug "EtherRain: $description Closed valve$id, $childDevice"
 	state.valves = "0:0:0:0:0:0:0:0:0"
 	valveSet("&xr") // what to append to the URI (reset)
-	childDevice.parse([name:"valve$id", value:"off", descriptionText:"${childDevice.displayName} was turned off"])
+	childDevice.parse([name:"valve$id", value:"closed", descriptionText:"${childDevice.displayName} was Closed"])
 	state.cycleInUse = 0
-	sendEvent(name: childDevice, value: "off") 
+	sendEvent(name: childDevice, value: "closed")   // report an Event in Parent, report Valve event in child.
 }
 
 
@@ -243,8 +285,8 @@ void translateStatus() {
 /*
  OS = Operating Status provides current the state of the controller. The states are:
  RD – READY. The controller is ready to accept a new irrigate command
- WT- WAITING. The controller has accepted an Irrigate command that had a delay associated with it and is waiting to start the command.
- BZ - BUSY. The controller is currently executed an irrigate command.
+ WT - WAITING. The controller has accepted an Irrigate command that had a delay associated with it and is waiting to start the command.
+ BZ - BUSY. The controller is currently executing an irrigate command.
  
  CS = Command status: - The result of the last command sent to the controller. Values returned are:
  OK - if the command was accepted
@@ -305,14 +347,14 @@ void translateStatus() {
 			state.erTstate += " "
 			break
 	}
-	log.debug "$state.erTstate"
+	if (debugOutput) log.debug "$state.erTstate"
 }
 
 
 /*
-
+	---=---=---=---=---=---=---=---=---
 	generic driver stuff
-
+	---=---=---=---=---=---=---=---=---
 */
 
 
@@ -337,35 +379,10 @@ void installed()
 void initialize()
 {
 	unschedule()
-//	if (debugOutput) runIn(1800,logsOff)        // disable debug logs after 30 min
-	schedule("0 0 8 ? * FRI *", updateCheck)
-	runIn(20, updateCheck) 
+	if (debugOutput) runIn(1800,logsOff)        // disable debug logs after 30 min
 	createChildDevices()
 	state.cycleInUse = 0
 	if (descTextEnable) log.info "EtherRain: initialize ran"
-}
-
-
-/*
-	on
-    
-	Parent UI button turns the device on.
-*/
-void open()
-{
-	if (descTextEnable) log.info "EtherRain: $description Opened $id"
-	
-}
-
-
-/*
-	off
-    
-	Parent UI button turns the device off.
-*/
-void close()
-{
-	if (descTextEnable) log.info "EtherRain: $description Closed $id"
 }
 
 
@@ -380,58 +397,6 @@ void close()
 void logsOff(){
 	log.warn "debug logging disabled..."
 	device.updateSetting("debugOutput",[value:"false",type:"bool"])
-}
-
-
-// Check Version   ***** with great thanks and acknowledgment to Cobra (CobraVmax) for his original code ****
-void updateCheck()
-{    
-//	def paramsUD = [uri: "https://hubitatcommunity.github.io/EtherRainValves/version2.json"]
-	def paramsUD = [uri: "https://csteele-pd.github.io/Hubitat-master/version2.json"]
-	
- 	asynchttpGet("updateCheckHandler", paramsUD) 
-}
-
-void updateCheckHandler(resp, data) {
-
-	state.InternalName = "EtherRain 8 Valves"
-
-	if (resp.getStatus() == 200 || resp.getStatus() == 207) {
-		respUD = parseJson(resp.data)
-		// log.warn " Version Checking - Response Data: $respUD"   // Troubleshooting Debug Code - Uncommenting this line should show the JSON response from your webserver 
-		state.Copyright = "${thisCopyright}"
-		// uses reformattted 'version2.json' 
-		def newVer = (respUD.driver.(state.InternalName).ver.replaceAll("[.vV]", ""))
-		def currentVer = version().replaceAll("[.vV]", "")                
-		state.UpdateInfo = (respUD.driver.(state.InternalName).updated)
-            // log.debug "updateCheck: ${respUD.driver.(state.InternalName).ver}, $state.UpdateInfo, ${respUD.author}"
-
-		switch(newVer) {
-			case { it == "NLS"}:
-			      state.Status = "<b>** This Driver is no longer supported by ${respUD.author}  **</b>"       
-			      log.warn "** This Driver is no longer supported by ${respUD.author} **"      
-				break
-			case { it > currentVer}:
-			      state.Status = "<b>New Version Available (Version: ${respUD.driver.(state.InternalName).ver})</b>"
-			      log.warn "** There is a newer version of this Driver available  (Version: ${respUD.driver.(state.InternalName).ver}) **"
-			      log.warn "** $state.UpdateInfo **"
-				break
-			case { it < currentVer}:
-			      state.Status = "<b>You are using a Test version of this Driver (Expecting: ${respUD.driver.(state.InternalName).ver})</b>"
-				break
-			default:
-				state.Status = "Current"
-				if (descTextEnable) log.info "You are using the current version of this driver"
-				break
-		}
-
- 	sendEvent(name: "verUpdate", value: state.UpdateInfo)
-	sendEvent(name: "verStatus", value: state.Status)
-      }
-      else
-      {
-           log.error "Something went wrong: CHECK THE JSON FILE AND IT'S URI"
-      }
 }
 
 void getThisCopyright(){"&copy; 2019 C Steele "}
