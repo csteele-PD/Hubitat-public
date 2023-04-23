@@ -2,7 +2,7 @@
   "packageName": "EtherRain",
   "author": "csteele",
   "dateReleased": "2022-06-09",
-  "releaseNotes": "Initial Release use with http://www.lawncheck.com/",
+  "releaseNotes": "1.0.2  cleanup and typo on closed.\n1.0.0  Initial Release use with http://www.lawncheck.com/",
   "releaseNotesExtended": "Initial Release use with <a href='http://www.lawncheck.com/'>LawnCheck.com</a>",
   "documentationLink": "http://www.quicksmart.com/qs_etherrain.html",
   "communityLink": "",
@@ -12,7 +12,7 @@
       "name": "EtherRain 8 Valves",
       "namespace": "csteele",
       "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/EtherRain/EtherRain-8-Valves.groovy",
-      "version": "1.0.3",
+      "version": "1.0.2",
       "oauth": false,
       "primary": true,
       "required": true
@@ -22,7 +22,7 @@
       "name": "EtherRain Device (Child)",
       "namespace": "csteele",
       "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/EtherRain/EtherRain-Child-Device.groovy",
-      "version": "1.0.3",
+      "version": "1.0.2",
       "oauth": false,
       "primary": false,
       "required": true
