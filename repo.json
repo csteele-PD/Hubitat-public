@@ -90,6 +90,7 @@
 	{
 		"name": "Virtual Thermo Driver",
 		"tags": ["Temperature & Humidity"],
+   		"category": "Control",
 		"location": "",
 		"description": "Virtual Thermostat Driver"
 	}
