@@ -86,6 +86,12 @@
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/AverageThis/master/docs/AverageThis.json",
 			"description": "Calculates a Rolling Average of Illuminance, Temperature and Relative Humidity from a set of Omni Sensors into a virtual sensor of your choice.",
 			"descriptive": "<ul><li>Aggregates sensor data into one virtual sensor that can then be used in automations. </li><li>Supports two Child types: multisensor or power.</li></ul>"
-   	}
+   	},
+	{
+		"name": "Virtual Thermo Driver",
+		"tags": ["Temperature & Humidity"],
+		"location": "",
+		"description": "Virtual Thermostat Driver"
+	}
    ]
 }
