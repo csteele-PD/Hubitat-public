@@ -2,7 +2,7 @@
   "packageName": "EtherRain",
   "author": "csteele",
   "dateReleased": "2023-10-05",
-  "releaseNotes": "v1.0.3     use descTextEnable / log.info to provide at least one status when debug is off.\n *                    matched valve name for childDevice.parse \n *                    removed null $description from status info message1.0.2  cleanup and typo on closed.\n1.0.0  Initial Release use with http://www.lawncheck.com/",
+  "releaseNotes": "v1.0.3     use descTextEnable / log.info to provide at least one status when debug is off.\n *            matched valve name for childDevice.parse \n *            removed null $description from status info message1.0.2  cleanup and typo on closed.\n1.0.0  Initial Release use with http://www.lawncheck.com/",
   "releaseNotesExtended": "Initial Release use with <a href='http://www.lawncheck.com/'>LawnCheck.com</a>",
   "documentationLink": "http://www.quicksmart.com/qs_etherrain.html",
   "communityLink": "",
