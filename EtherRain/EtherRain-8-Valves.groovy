@@ -19,11 +19,14 @@
  */
  
  
-public static String version()      {  return "v1.0.2"  }
+public static String version()      {  return "v1.0.3"  }
 
 /***********************************************************************************************************************
+ *         v1.0.3     use descTextEnable / log.info to provide at least one status when debug is off.
+ *                    matched valve name for childDevice.parse 
+ *                    removed null $description from status info message
  *         v1.0.2     use debugOutput to filter logs
- *                  fixed typo for closed 
+ *                    fixed typo for closed 
  * Version: 1.0.0
  *
  */
@@ -206,7 +209,7 @@ void close()
 void open(id, valveTimer)
 {
 	def childDevice = getChildDevices()?.find {it.data.componentLabel == id.toInteger()}
-	if (debugOutput) log.debug "EtherRain: $description Opened valve$id, $childDevice, $valveTimer, [$igateDelay]"
+	if (descTextEnable) log.info "EtherRain: Opened $childDevice (valve$id), $valveTimer, [$igateDelay]"
 
 	long localeMillis = new Date().getTime()
 	if (state.cycleInUse) {
@@ -241,10 +244,10 @@ void open(id, valveTimer)
 void close(id, valveTimer)
 {
 	def childDevice = getChildDevices()?.find {it.data.componentLabel == id.toInteger()}
-	if (debugOutput) log.debug "EtherRain: $description Closed valve$id, $childDevice"
+	if (descTextEnable) log.info "EtherRain: Closed $childDevice (valve$id)"
 	state.valves = "0:0:0:0:0:0:0:0:0"
 	valveSet("&xr") // what to append to the URI (reset)
-	childDevice.parse([name:"valve$id", value:"closed", descriptionText:"${childDevice.displayName} was Closed"])
+	childDevice.parse([name:"valve", value:"closed", descriptionText:"${childDevice.displayName} was Closed"])
 	state.cycleInUse = 0
 	sendEvent(name: childDevice, value: "closed")   // report an Event in Parent, report Valve event in child.
 }
