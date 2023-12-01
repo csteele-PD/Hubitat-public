@@ -76,7 +76,7 @@
    		"category": "Control",
    		"tags": ["Irrigation", "LAN", "Timers", "Valves", "Water"],
    		"location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/EtherRain/packageManifest.json",
-   		"description": "EtherRain Sprinkler Controller and child Driver"
+   		"description": "EtherRain Sprinkler Controller and child Driver Apple  MacOS™"
    	},
       {
    		"name": "AverageThis",
