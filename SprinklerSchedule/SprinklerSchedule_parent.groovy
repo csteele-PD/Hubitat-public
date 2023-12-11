@@ -42,12 +42,12 @@ This code is licensed as follows:
  *
  *
  *
- * csteele: v0.1		Converted from Matt Hammond's Lighting Schedules
+ * csteele: v1.0.0	Converted from Matt Hammond's Lighting Schedules
  *                	 Converted to capability.valve from switch 
  *
  */
  
-	public static String version()      {  return "v0.1"  }
+	public static String version()      {  return "v1.0.0"  }
 
 	import groovy.transform.Field
 
