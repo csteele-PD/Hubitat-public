@@ -93,7 +93,8 @@
    		"category": "Integrations",
    		"location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/SprinklerSchedule/PackageManifest.json",
    		"description": "App (Parent and Child) to schedule sprinkler valves on a daily basis.",
-   		"tags": ["Irrigation", "Timers"]
+		"descriptive": "Sprinkler systems need valves to run the water on a Schedule. This App (Parent and Child) provides a schedule for each valve or group of valves on the Controller. <br>The Parent app is a wrapper for one or more child schedules. Generally you would use one child per valve to keep adequate water pressure.<p>Each Child has one Timing statement that must contain at least one time range, comma separated.",
+   		"tags": ["Irrigation", "Timers", "Water"]
     }
    ]
 }
