@@ -93,7 +93,7 @@
    		"category": "Integrations",
    		"location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/SprinklerSchedule/PackageManifest.json",
    		"description": "App to schedule sprinkler valves on a daily basis.",
-   		"tags": ["Timers", "Irrigation"]
+   		"tags": ["Irrigation", "Timers"]
     }
    ]
 }
