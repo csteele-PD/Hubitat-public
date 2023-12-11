@@ -8,8 +8,8 @@
    		"category": "Control",
    		"tags": ["Lights & Switches"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/AeotecMultiSensor6/master/docs/AeotecMultiSensor6.json",
-			"description": "A more preference filled alternative to the Built-In driver.",
-			"descriptive": "<ul><li>Temperature Change Amount (Tenths of a degree)? The tenths of degrees the temperature must change to induce an automatic report.</li><li>Humidity Change Amount (%)? The percentage the humidity must change to induce an automatic report.</li><li>Luminance Change Amount (LUX)? The amount of LUX the luminance must change to induce an automatic report.</li><li>Temperature Offset? -128 to +127 (Tenths of a degree) If your temperature is inaccurate this will offset/adjust it by this many tenths of a degree.</li><li>Humidity Offset/Adjustment -50 to +50 in percent? If your humidity is inaccurate this will offset/adjust it by this percent.</li><li>Luminance Offset/Adjustment -10 to +10 in LUX? If your luminance is inaccurate this will offset/adjust it by this percent.</li></ul>"
+		"description": "A more preference filled alternative to the Built-In driver.",
+		"descriptive": "<ul><li>Temperature Change Amount (Tenths of a degree)? The tenths of degrees the temperature must change to induce an automatic report.</li><li>Humidity Change Amount (%)? The percentage the humidity must change to induce an automatic report.</li><li>Luminance Change Amount (LUX)? The amount of LUX the luminance must change to induce an automatic report.</li><li>Temperature Offset? -128 to +127 (Tenths of a degree) If your temperature is inaccurate this will offset/adjust it by this many tenths of a degree.</li><li>Humidity Offset/Adjustment -50 to +50 in percent? If your humidity is inaccurate this will offset/adjust it by this percent.</li><li>Luminance Offset/Adjustment -10 to +10 in LUX? If your luminance is inaccurate this will offset/adjust it by this percent.</li></ul>"
    	},
    	{
    		"name": "HoneywellThermo-TCC Driver",
@@ -17,8 +17,8 @@
    		"category": "Control",
    		"tags": ["Temperature & Humidity"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/HoneywellThermo-TCC/master/docs/HoneywellThermo-TCC.json",
-			"description": "Integrate Honeywell's Total Comfort Control for your WiFi Thermostat.",
-			"descriptive": "<ul><li>Supports Honeywell's entre level thermostats such as the Honeywell Home Wi-Fi 7-Day Programmable Thermostat (RTH6580WF)</li><li>This integration makes a Cloud connection to Honeywell's Total Connect Comfort (TCC). </li><li>This driver, alone, provides control access (setpoints) to the Thermostat. The Thermostat's built-in scheduler can be adequate for most users.</li><li>Can be combined with Hubitat's Thermostat Controller and/or Hubitat's Thermostat Scheduler.</li></ul>"
+		"description": "Integrate Honeywell's Total Comfort Control for your WiFi Thermostat.",
+		"descriptive": "<ul><li>Supports Honeywell's entre level thermostats such as the Honeywell Home Wi-Fi 7-Day Programmable Thermostat (RTH6580WF)</li><li>This integration makes a Cloud connection to Honeywell's Total Connect Comfort (TCC). </li><li>This driver, alone, provides control access (setpoints) to the Thermostat. The Thermostat's built-in scheduler can be adequate for most users.</li><li>Can be combined with Hubitat's Thermostat Controller and/or Hubitat's Thermostat Scheduler.</li></ul>"
    	},
    	{
    		"name": "Hubitat-BetterLaundryMonitor",
@@ -50,8 +50,8 @@
    		"category": "Control",
    		"tags": ["Tools & Utilities"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/GetAttributeApp/master/docs/GetAttributeApp.json",
-			"description": "Display a device's Capabilities, Attributes and Commands.",
-			"descriptive": "<ul><li>Select one or more devices and have Capabilities, Attributes and Commands displayed and compare.</li><li>Very useful as a starting point for custom coding based on existing drivers.</li></ul>"
+		"description": "Display a device's Capabilities, Attributes and Commands.",
+		"descriptive": "<ul><li>Select one or more devices and have Capabilities, Attributes and Commands displayed and compare.</li><li>Very useful as a starting point for custom coding based on existing drivers.</li></ul>"
    	},
       {
    		"name": "Air Quality from AirNow",
@@ -67,8 +67,8 @@
    		"category": "Control",
    		"tags": ["Temperature & Humidity"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/HoneywellThermoParent/main/docs/HoneywellThermoParent.json",
-			"description": "A Parent/child version of the original",
-			"descriptive": "<ul><li>Supports multiple Honeywell WiFi Thermostats under a single TCC id with each child thermostat operating independently.</li><li>Supports Honeywell's entre level thermostats such as the Honeywell Home Wi-Fi 7-Day Programmable Thermostat (RTH6580WF)</li><li>This integration makes a Cloud connection to Honeywell's Total Connect Comfort (TCC). </li><li>This driver, alone, provides control access (setpoints) to the Thermostat. The Thermostat's built-in scheduler can be adequate for most users.</li><li>Can be combined with Hubitat's Thermostat Controller and/or Hubitat's Thermostat Scheduler.</li></ul>"
+		"description": "A Parent/child version of the original",
+		"descriptive": "<ul><li>Supports multiple Honeywell WiFi Thermostats under a single TCC id with each child thermostat operating independently.</li><li>Supports Honeywell's entre level thermostats such as the Honeywell Home Wi-Fi 7-Day Programmable Thermostat (RTH6580WF)</li><li>This integration makes a Cloud connection to Honeywell's Total Connect Comfort (TCC). </li><li>This driver, alone, provides control access (setpoints) to the Thermostat. The Thermostat's built-in scheduler can be adequate for most users.</li><li>Can be combined with Hubitat's Thermostat Controller and/or Hubitat's Thermostat Scheduler.</li></ul>"
    	},
       {
    		"name": "EtherRain",
@@ -84,8 +84,16 @@
    		"category": "Control",
    		"tags": ["Energy Monitoring", "Monitoring", "Appliances"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/AverageThis/master/docs/AverageThis.json",
-			"description": "Calculates a Rolling Average of Illuminance, Temperature and Relative Humidity from a set of Omni Sensors into a virtual sensor of your choice.",
-			"descriptive": "<ul><li>Aggregates sensor data into one virtual sensor that can then be used in automations. </li><li>Supports two Child types: multisensor or power.</li></ul>"
-	}
+		"description": "Calculates a Rolling Average of Illuminance, Temperature and Relative Humidity from a set of Omni Sensors into a virtual sensor of your choice.",
+		"descriptive": "<ul><li>Aggregates sensor data into one virtual sensor that can then be used in automations. </li><li>Supports two Child types: multisensor or power.</li></ul>"
+	},
+	{
+   		"id": "1bd62e6f-11b6-43a3-af69-3d2b46a4e6b8",
+   		"name": "Sprinkler Schedules",
+   		"category": "Integrations",
+   		"location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/SprinklerSchedule/PackageManifest.json",
+   		"description": "App to schedule sprinkler valves on a daily basis.",
+   		"tags": ["Timers"]
+    }
    ]
 }
