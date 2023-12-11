@@ -19,7 +19,7 @@
       "name": "Sprinkler Schedule",
       "namespace": "csteele",
       "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/SprinklerSchedule/SprinklerSchedule_child.groovy",
-      "required": false,
+      "required": true,
       "oauth": false,
       "primary": false,
       "version": "0.1"
