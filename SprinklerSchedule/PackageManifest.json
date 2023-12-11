@@ -1,0 +1,28 @@
+{
+  "packageName": "Sprinkler Schedules",
+  "author": "C Steele",
+  "minimumHEVersion": "0.0",
+  "dateReleased": "2023-12-10",
+  "apps": [
+    {
+      "id": "096fca6d-0ea9-442e-8b3c-126527e00d25",
+      "name": "Sprinkler Schedules",
+      "namespace": "csteele",
+      "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/SprinklerSchedule/SprinklerSchedule_parent.groovy",
+      "required": true,
+      "oauth": false,
+      "primary": true,
+      "version": "0.1"
+    },
+    {
+      "id": "9aeb656d-120e-4a6c-9dfb-eb5755f360be",
+      "name": "Sprinkler Schedule",
+      "namespace": "csteele",
+      "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/SprinklerSchedule/SprinklerSchedule_child.groovy",
+      "required": false,
+      "oauth": false,
+      "primary": false,
+      "version": "0.1"
+    }
+  ]
+}
