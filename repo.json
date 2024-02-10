@@ -97,7 +97,7 @@
    		"tags": ["Irrigation", "Timers", "Water"]
 	},
 	{
-   		"name": "webCoRE",
+   		"name": "webCoRE Bundle",
    		"category": "Utility",
    		"tags": ["Automations & Groups","Tools & Utilities","Dashboards"],
    		"location": "https://raw.githubusercontent.com/csteele-PD/WebCoRE/main/packageManager.json",
