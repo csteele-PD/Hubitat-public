@@ -18,14 +18,17 @@
  *
  */
  
- 
-public static String version()      {  return "v1.0.3"  }
+public static String version()      {  return "v1.0.4"  }
 
 /***********************************************************************************************************************
+ *         v1.0.4     add Rain Sensor status.
+ *                    removed State variables from standalone version check.
+ *                    expose version & copyright.
  *         v1.0.3     use descTextEnable / log.info to provide at least one status when debug is off.
  *                    matched valve name for childDevice.parse 
  *                    removed null $description from status info message
  *         v1.0.2     use debugOutput to filter logs
+ *                    removed standalone version check (allow HPM to check.)
  *                    fixed typo for closed 
  * Version: 1.0.0
  *
@@ -37,6 +40,8 @@ metadata
 	{
 		capability "Actuator"
 		capability "Refresh"
+
+		attribute "rainSensor", "string"
 
 		command "recreateChildDevices"
 	}
@@ -73,6 +78,7 @@ void updated()
 {
 	initialize()
 	log.trace "EtherRain: updated ran"
+	state.Version = "${version()} - ${thisCopyright}"
 }
 
                         
@@ -122,7 +128,8 @@ void valveSetHandler(resp, data) {
 		state.erOstate = (resp.data =~ "os: (..)")[0][1] // operating status
 		state.erCstate = (resp.data =~ "cs: (..)")[0][1] // command status
 		state.erRstate = (resp.data =~ "rz: (..)")[0][1] // result (reZult)
-		//if (debugOutput) log.debug "states: $state.erOstate $state.erCstate $state.erRstate" 
+		state.erGstate = (resp.data =~ "rn: (..)")[0][1] // rain sensor
+		//if (debugOutput) log.debug "states: $state.erOstate $state.erCstate $state.erRstate $state.erGstate" 
 		translateStatus() 
 	} else { log.error "EtherRain api did not return data. Check Username, PW and IP address." }
 }
@@ -165,8 +172,10 @@ void statusHandler(resp, data) {
 		state.erOstate = (resp.data =~ "os: (..)")[0][1] // operating status
 		state.erCstate = (resp.data =~ "cs: (..)")[0][1] // command status
 		state.erRstate = (resp.data =~ "rs: (..)")[0][1] // results
-		//if (debugOutput) log.debug "states: $state.erOstate $state.erCstate $state.erRstate"
+		state.erGstate = (resp.data =~ "rn: (..)")[0][1] // rain sensor
+		//if (debugOutput) log.debug "states: $state.erOstate $state.erCstate $state.erRstate $state.erGstate" 
 		translateStatus()
+		sendEvent(name: "rainSensor", value:state.erGstate, descriptionText:"")    
 	} else { log.error "EtherRain api did not return data" }
 }
 
@@ -305,7 +314,7 @@ void translateStatus() {
 
 	state.erTstate = "Results: "
 
-	switch (state.erOstate) {
+	switch (state.erOstate) {	// Operating State
 		case "RD":
 			state.erTstate += "Ready"
 			break
@@ -319,7 +328,7 @@ void translateStatus() {
 			state.erTstate += " "
 			break
 	}
-	switch (state.erCstate) {
+	switch (state.erCstate) {	// Command State
 		case "OK":
 			state.erTstate += ", OK"
 			break
@@ -333,7 +342,7 @@ void translateStatus() {
 			state.erTstate += " "
 			break
 	}
-	switch (state.erRstate) {
+	switch (state.erRstate) {	// Result State		
 		case "OK":
 			state.erTstate += ", OK"
 			break
@@ -350,6 +359,15 @@ void translateStatus() {
 			state.erTstate += " "
 			break
 	}
+	switch (state.erGstate) {	// Rain Sensor State
+		case "0":
+			state.erTstate += ", Rain Sensor Not Detected"
+			break
+		case "1":
+			state.erTstate += ", Rain Sensor Detected Rain"
+			break
+	}
+
 	if (debugOutput) log.debug "$state.erTstate"
 }
 
@@ -386,6 +404,11 @@ void initialize()
 	createChildDevices()
 	state.cycleInUse = 0
 	if (descTextEnable) log.info "EtherRain: initialize ran"
+	// remove State variables from standalone version check
+	state.remove("Copyright")
+	state.remove("Status")
+	state.remove("InternalName")
+	state.remove("UpdateInfo")
 }
 
 
@@ -402,4 +425,4 @@ void logsOff(){
 	device.updateSetting("debugOutput",[value:"false",type:"bool"])
 }
 
-void getThisCopyright(){"&copy; 2019 C Steele "}
+def getThisCopyright(){"&copy; 2019 C Steele "}
