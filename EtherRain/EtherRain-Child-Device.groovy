@@ -12,9 +12,11 @@
  *
  */
 
-public static String version()      {  return "v1.0.2"  }
+public static String version()      {  return "v1.0.3"  }
 
 /***********************************************************************************************************************
+ *         v1.0.3     removed unused State (InternalName)
+ *                    expose version & copyright.
  *         v1.0.2     removed standalone version check (allow HPM to check.)
  * Version: 1.0.0
  *
@@ -56,6 +58,7 @@ void updated()
 {
 	initialize()
 	log.trace "EtherRain Child Updated: $device, $device.deviceNetworkId, ${getDataValue("componentLabel")}" 
+	state.Version = "${version()} - ${thisCopyright}"
 }
 
 
@@ -81,6 +84,7 @@ void initialize()
 {
 	unschedule()
 	log.trace "EtherRain Child Initialize"
+	state.remove("InternalName")
 }
 
-void getThisCopyright(){"&copy; 2019 C Steele "}
+def getThisCopyright(){"&copy; 2019 C Steele "}
