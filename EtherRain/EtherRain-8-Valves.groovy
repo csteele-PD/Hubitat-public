@@ -128,7 +128,7 @@ void valveSetHandler(resp, data) {
 		state.erOstate = (resp.data =~ "os: (..)")[0][1] // operating status
 		state.erCstate = (resp.data =~ "cs: (..)")[0][1] // command status
 		state.erRstate = (resp.data =~ "rz: (..)")[0][1] // result (reZult)
-		state.erGstate = (resp.data =~ "rn: (..)")[0][1] // rain sensor
+		state.erGstate = (resp.data =~ "rn: (.)")[0][1]  // rain sensor
 		//if (debugOutput) log.debug "states: $state.erOstate $state.erCstate $state.erRstate $state.erGstate" 
 		translateStatus() 
 	} else { log.error "EtherRain api did not return data. Check Username, PW and IP address." }
@@ -172,7 +172,7 @@ void statusHandler(resp, data) {
 		state.erOstate = (resp.data =~ "os: (..)")[0][1] // operating status
 		state.erCstate = (resp.data =~ "cs: (..)")[0][1] // command status
 		state.erRstate = (resp.data =~ "rs: (..)")[0][1] // results
-		state.erGstate = (resp.data =~ "rn: (..)")[0][1] // rain sensor
+		state.erGstate = (resp.data =~ "rn: (.)")[0][1]  // rain sensor
 		//if (debugOutput) log.debug "states: $state.erOstate $state.erCstate $state.erRstate $state.erGstate" 
 		translateStatus()
 		sendEvent(name: "rainSensor", value:state.erGstate, descriptionText:"")    
