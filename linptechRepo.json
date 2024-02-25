@@ -1,0 +1,16 @@
+{
+    "author": "Krassimir Kossev",
+    "packages": [
+        {
+            "id": "82ffb549-c33e-4d1a-927b-a4921692718f",
+            "name": "Linptech 24Ghz Presence Sensor ES1",
+            "category": "Control",
+            "tags": [
+                "Zigbee",
+                "Presence & Location"
+            ],
+            "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/dev/Linptech-ES1.json",
+            "description": "Linptech 24Ghz Presence Sensor ES1"
+        }
+    ]
+}
