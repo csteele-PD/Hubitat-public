@@ -1,0 +1,16 @@
+{
+  "packageName": "Linptech 24Ghz Presence Sensor ES1",
+  "author": "Krassimir Kossev",
+  "version": "2.0.1",
+  "minimumHEVersion": "2.3.5",
+  "dateReleased": "2024-02-25",
+  "drivers": [
+    {
+      "id": "bb7118c2-fb67-49a6-92a8-ad40c90c33e4",
+      "name": "Linptech 24Ghz Presence Sensor ES1",
+      "namespace": "Gassgs",
+      "location": "https://raw.githubusercontent.com/Gassgs/Hubitat-Apps-and-Drivers/master/Drivers/Linptech%2024Ghz%20Presence%20Sensor%20ES1.groovy",
+      "required": true
+    }
+  ]
+}
