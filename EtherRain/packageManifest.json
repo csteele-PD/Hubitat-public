@@ -2,6 +2,7 @@
   "packageName": "EtherRain",
   "author": "csteele",
   "dateReleased": "2023-10-05",
+  "version": "1.0.4",
   "releaseNotes": "v1.0.4     add Rain Sensor status.\n           removed State variables from standalone version check.\n           expose version & copyright.\nv1.0.3     use descTextEnable / log.info to provide at least one status when debug is off.\n *            matched valve name for childDevice.parse \n *            removed null $description from status info message",
   "releaseNotesExtended": "Initial Release use with <a href='http://www.lawncheck.com/'>LawnCheck.com</a>",
   "documentationLink": "http://www.quicksmart.com/qs_etherrain.html",
@@ -12,7 +13,6 @@
       "name": "EtherRain 8 Valves",
       "namespace": "csteele",
       "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/EtherRain/EtherRain-8-Valves.groovy",
-      "version": "1.0.4",
       "oauth": false,
       "primary": true,
       "required": true
@@ -22,7 +22,6 @@
       "name": "EtherRain Device (Child)",
       "namespace": "csteele",
       "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/EtherRain/EtherRain-Child-Device.groovy",
-      "version": "1.0.3",
       "oauth": false,
       "primary": false,
       "required": true
