@@ -86,22 +86,6 @@
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/AverageThis/master/docs/AverageThis.json",
 		"description": "Calculates a Rolling Average of Illuminance, Temperature and Relative Humidity from a set of Omni Sensors into a virtual sensor of your choice.",
 		"descriptive": "<ul><li>Aggregates sensor data into one virtual sensor that can then be used in automations. </li><li>Supports two Child types: multisensor or power.</li></ul>"
-	},
-	{
-   		"id": "1bd62e6f-11b6-43a3-af69-3d2b46a4e6b8",
-   		"name": "Sprinkler Schedules",
-   		"category": "Integrations",
-   		"location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/SprinklerSchedule/PackageManifest.json",
-   		"description": "App (Parent and Child) to schedule sprinkler valves on a daily basis.",
-		"descriptive": "Sprinkler systems need valves to run the water on a Schedule. This App (Parent and Child) provides a schedule for each valve or group of valves on the Controller. <br>The Parent app is a wrapper for one or more child schedules. Generally you would use one child per valve to keep adequate water pressure.<p>Each Child has one Timing statement that must contain at least one time range, comma separated.",
-   		"tags": ["Irrigation", "Timers", "Water"]
-	},
-	{
-   		"name": "webCoRE Bundle",
-   		"category": "Utility",
-   		"tags": ["Automations & Groups","Tools & Utilities","Dashboards"],
-   		"location": "https://raw.githubusercontent.com/csteele-PD/WebCoRE/main/packageManager.json",
-   		"description": "webCoRE for Hubitat Bundle - run webCoRE pistons (automations) locally on your Hubitat system"
 	}
    ]
 }
