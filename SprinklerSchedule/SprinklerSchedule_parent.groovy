@@ -52,7 +52,7 @@ This code is licensed as follows:
 	import groovy.transform.Field
 
 definition(
-	name: "Sprinkler Schedules",
+	name: "Sprinkler Schedule Manager",
 	namespace: "csteele",
 	author: "C Steele, Matt Hammond",
 	description: "Controls switches to a timing schedule",
@@ -63,11 +63,11 @@ definition(
 )
 
 preferences {
-	page(name: "mainPage", title: "", install: true, uninstall: true,submitOnChange: true) {
+	page(name: "mainPage", title: "", install: true, uninstall: true, submitOnChange: true) {
 	  displayHeader()
         section {
-            app (name: "sprinklerSchedule",
-                 appName: "Sprinkler Schedule",
+            app (name: "sprinklerTimetable",
+                 appName: "Sprinkler Valve Timetable",
                  namespace: "csteele",
                  title: "Create New Sprinkler Schedule",
                  multiple: true)
@@ -102,7 +102,7 @@ def getFormat(type, myText=""){            // Modified from @Stephack Code
 
 def displayHeader() {
 	section (getFormat("title", "Sprinkler Schedules")) {
-		paragraph "<div style='color:#1A77C9;text-align:right;font-weight:small;font-size:9px;'>Developed by: Matt Hammond, C Steele<br/>Current Version: ${version()} -  ${thisCopyright}</div>"
+		paragraph "<div style='color:#1A77C9;text-align:right;font-weight:small;font-size:9px;'>Developed by: C Steele, Matt Hammond <br/>Current Version: ${version()} -  ${thisCopyright}</div>"
 		paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
 	}
 }
