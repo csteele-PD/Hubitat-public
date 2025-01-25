@@ -88,7 +88,7 @@
 		"descriptive": "<ul><li>Aggregates sensor data into one virtual sensor that can then be used in automations. </li><li>Supports two Child types: multisensor or power.</li></ul>"
 	},
 	{
-		"name": "Sprinkler Schedules",
+		"name": "Sprinkler Schedule Manager",
 		"id": "1bd62e6f-11b6-43a3-af69-3d2b46a4e6b8",
 		"category": "Integrations",
 		"location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/SprinklerSchedule/PackageManifest.json",
