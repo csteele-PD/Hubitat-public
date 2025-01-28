@@ -42,10 +42,12 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.1	?
  * csteele: v1.0.0	Converted from Matt Hammond's Lighting Schedule (child)
  *                	 Converted to capability.valve from switch 
  *
  */
+/// DEVELOPMENT FORK
  
 	public static String version()      {  return "v1.0.1"  }
 
@@ -66,9 +68,11 @@ definition(
 preferences {
 	page(name: "main")
 }
-
+///['1': ['mon':true, 'tue':true, 'wed':true, 'thu':true, 'fri':true, 'sat':true, 'sun':true]
 def main(){
-	state.dayGroupTemplate = ['1':false, '2':false, '3':false, '4':false, '5':false, '6':false, '7':false] // new rows are all empty
+///    state.dayGroup = null
+///    state.dayGroupSettings = null   
+///    state.valves = null
 	if(state.valves == null) state.valves = [:] 
 	if(state.paused == null) state.paused = false
 	if(state.dayGroupSettings == null) state.dayGroupSettings = ['1':['duraTime':0, 'startTime':0]]
@@ -85,7 +89,7 @@ def main(){
 	  section("<h1 style='font-size:1.5em; font-style: italic;'>General</h1>") {
 		input "appLabel",
 		    "text",
-		    title: "Name for this application",
+		    title: "<b>Name for this application</b>",
 		    multiple: false,
 		    required: true,
 		    submitOnChange: true
@@ -105,15 +109,19 @@ def main(){
 	  
 	  		paragraph "<b>Select Days into Groups</b>"
 	  		paragraph displayDayGroups()		// display day-of-week groups
+	  //         logDebug "Main A: $state.valves"
 	  		paragraph "<b>Select Period Settings by Group</b>"
 	  		paragraph displayTable()		// display groups for scheduling
+	  //         logDebug "Main B: $state.valves"
 	  
 	  		paragraph "<b>Select Valves into Day Groups</b>"
 	  		paragraph displayGrpSched()		// display mapping of Valve to DayGroup
+	  //         logDebug "Main C: $state.valves"
 	  	
 	  		displayDuration()
 	  		displayStartTime()
 	  		selectDayGroup()
+	  //         logDebug "Main D: $state.valves"
 	  		paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
 	      }
 	  }
@@ -160,6 +168,14 @@ String displayDayGroups() {	// display day-of-week groups - Section I
 		state.remove("dayGroupBtn") // only once 
 		logDebug "displayDayGroups Item: $dgK.$dgI"
 	}
+
+  // provide some feedback on which valves are On
+	valves?.each{ dev ->
+	    def ID = dev.deviceId
+	    def isOn = dev.currentValue('valve', true) == 'open'
+	    
+///	    logDebug "Checking for device ID $ID ... isOn: $isOn"
+      }
 
 	String str = "<script src='https://code.iconify.design/iconify-icon/1.0.0/iconify-icon.min.js'></script>"
 	str += "<style>.mdl-data-table tbody tr:hover{background-color:inherit} .tstat-col td,.tstat-col th { padding:8px 8px;text-align:center;font-size:12px} .tstat-col td {font-size:15px }" +
@@ -236,8 +252,10 @@ String displayTable() { 	// display groups for scheduling - Section II
 		  String sTime    = state.dayGroupSettings[k]?.startTime ? buttonLink("t$k", state.dayGroupSettings[k].startTime, "black") : buttonLink("t$k", "Set Time", "green")
 		  String dTime    = state.dayGroupSettings[k]?.duraTime
 		  String duraTime = dTime ?  buttonLink("n$k", dTime, "purple") : buttonLink("n$k", "Select", "green")
+//		  String duraTime = state.dayGroupSettings[k]?.duraTime ?  buttonLink("n$k", state.dayGroupSettings[k].duraTime, "purple") : buttonLink("n$k", "Select", "green")  //// why doesn't this work?
 		  String devLink  = "<a href='/device/edit/$k' target='_blank' title='Open Device Page for $dev'>$dev"
 		  String reset    = buttonLink("x$k", "<iconify-icon icon='bx:reset'></iconify-icon>", "black", "20px")
+ ///      logDebug "displayTable: $k, $sTime, $duraTime, $reset" ///
 		  str += "<tr style='color:black'>" +
 		  	"<td style='border-right:2px solid black'>$dayGroupNamed</td>" +
 		  	"<td>$sTime</td>" +
@@ -281,6 +299,7 @@ Display level handlers
 */
 def displayStartTime() {
  	if(state.startTimeBtn) {
+ 		logDebug "displayStartTime: $state.startTimeBtn, $StartTime, $state.doneTime" ///
 		input "StartTime", "time",   title: "At This Time", submitOnChange: true, width: 4, defaultValue: state.startTimeBtn, newLineAfter: false
 		input "DoneTime$state.startTimeBtn",  "button", title: "  Done with time  ", width: 2, newLineAfter: false
 		input "EraseTime$state.startTimeBtn", "button", title: "  Erase Time  ", width: 2, newLineAfter: true
@@ -307,6 +326,7 @@ def displayStartTime() {
 
 def displayDuration() {
  	if(state.duraTimeBtn) {
+		logDebug "displayDuration: $state.duraTimeBtn, $DuraTime" ///
 		input "DuraTime", "decimal", title: "Sprinkler Duration", submitOnChange: true, width: 4, range: "1..60", defaultValue: state.dayGroupSettings[state.duraTimeBtn].duraTime, newLineAfter: true
 		if(DuraTime) {
 			state.dayGroupSettings[state.duraTimeBtn].duraTime = DuraTime //validateTimings(DuraTime)
@@ -319,9 +339,10 @@ def displayDuration() {
 
 def selectDayGroup() {
  	if(state.dayGrpBtn) {
+		logDebug "selectDayGroup: $state.dayGrpBtn, $DayGroup" ///
 		List vars = state.dayGroup.keySet().collect() 
 
-		input "DayGroup", "enum", title: "Sprinkler Group", submitOnChange: true, width: 4, options: state.dayGroup, newLineAfter: true, multiple: true
+		input "DayGroup", "enum", title: "Sprinkler Group", submitOnChange: true, width: 4, options: vars, newLineAfter: true, multiple: true
 		if(DayGroup) {
 			state.valves[state.dayGrpBtn].dayGroup = DayGroup
 			state.remove("dayGrpBtn")
@@ -332,12 +353,14 @@ def selectDayGroup() {
 }
 
 def addDayGroup(evt = null) {
+	dayGroupTemplate = ['1':false, '2':false, '3':false, '4':false, '5':false, '6':false, '7':false] // new rows are all empty
+
 	dayGroupSize = state.dayGroup.keySet().size()
 	s = dayGroupSize as int
 	s++
 	logDebug "adding another dayGroup map: $s"
-	state.dayGroup += ["$s":state.dayGroupTemplate] 
-	state.dayGroupSettings += ["$s":['duraTime':0, 'startTime':0]] 
+	state.dayGroup += ["$s":dayGroupTemplate] 
+	state.dayGroupSettings += ["$s":['duraTime':0, 'startTime':0]] // !!!! ////
 }
 
 
@@ -390,14 +413,15 @@ String buttonLink(String btnName, String linkText, color = "#1A77C9", font = "15
 }
 
 void appButtonHandler(btn) {
+	logDebug "appButtonHandler: $btn" ///
 	state.remove("duraTimeBtn")
 	state.remove("dayGrpBtn")
 	state.remove("startTimeBtn")
 	state.remove("dayGroupBtn")
 	state.remove("doneTime")
 	state.remove("eraseTime")
-		app.removeSetting("StartTime")
-		app.removeSetting("DuraTime") 
+		app.removeSetting("StartTime") /// ??why??
+		app.removeSetting("DuraTime") /// ??why??
 
 	if(btn == "reset") resetTimers()
 	else if(btn == "refresh") state.valves.each{k, v ->
@@ -429,6 +453,7 @@ Logging output
 def logDebug(msg) {
 	if (settings.debugEnable) {
         log.debug msg
+///        log.warn msg	///
 	}
 }
 
@@ -438,28 +463,6 @@ def logInfo(msg) {
     }
 }
 
-/*
------------------------------------------------------------------------------
-Regex for matching time period patterns
------------------------------------------------------------------------------
-
-Matches: TIMESPEC-TIMESPEC REMAINDER
-
-	TIMESPEC = any of:
-	             HHMM
-	             HH:MM
-	             sunrise
-	             sunset
-	             sunrise[+-]OFFSET
-	             sunset[+-]OFFSET
-	HH     := [0-2][0-9]
-	MM     := [0-5][0-9]
-	OFFSET := 0|(?:[1-9][0-9]{0,2})    .... between 1 and 3 digits, always starting with a non zero, or just zero
-
-  restricting format of OFFSET in this way means it will never match the 4 digit pattern or HHMM or HH:MM ... hopefully
-*/
-
-@Field static def timeRangePattern = ~/^[;, ]*(?:(?:([0-2][0-9])[:.]?([0-5][0-9]))|(?:(sunrise|sunset)( *[+-] *(?:0|(?:[1-9][0-9]{0,2})))?)) *(?:-|to) *(?:(?:([0-2][0-9])[:.]?([0-5][0-9]))|(?:(sunrise|sunset)( *[+-] *(?:0|(?:[1-9][0-9]{0,2})))?))[;, ]*(.*)$/
 
 /*
 -----------------------------------------------------------------------------
@@ -467,54 +470,30 @@ Standard handlers, and mode-change handler
 -----------------------------------------------------------------------------
 */
 
+def initialize() {		// unused?
+	logDebug "initialize()"
+	unsubscribe()
+	update()
+}
+
 def installed() {
 	logDebug "installed()"
 	state.wasInPeriod = [:]
 	state.wasActive = null
-	initialize()
+	update()
 }
 
 
 def updated() {
 	logDebug "updated()"
-	unsubscribe()
-	initialize()
+	update()
 }
 
-
-def initialize() {
-	logDebug "initialize()"
-	subscribe location, "mode", modeChangeHandler
-	update(true)
-}
 
 def uninstalled() {
 	logDebug "uninstalled()"
 }
 
-
-def modeChangeHandler(evt) {
-	update(true)
-}
-
-/**
- * if a valve becomes unselected by the user, the dynamically created settings entry is not automatically deleted by hubitat
- * so this method cleans them up, both permanently by calling app.removeSeting, and also immediately for the subsequent update() code
- * by also removing from the temporary current settings object
- */
-def scrubUnusedSettings() {
-	settings.findAll {
-	    it -> it.key =~ /devTimings-[0-9]+/
-	}.findAll {
-	    it -> ! valves.any {
-	        dev -> it.key == "devTimings-$dev.id"
-	    }
-	}.each {
-	    it ->
-	        app.removeSetting it.key
-	        settings.remove it.key
-	}
-}
 
 /*
 -----------------------------------------------------------------------------
@@ -522,7 +501,7 @@ Whenever there is a change/update
 -----------------------------------------------------------------------------
 */
 
-def update(modeChanged=false) {
+def update() {
 	def pauseText = "";
 	if (settings.paused) {
 	    pauseText = ' <span style="color: red;">(Paused)</span>'
@@ -532,343 +511,104 @@ def update(modeChanged=false) {
 	} else {
 	    app.updateLabel("Schedule${pauseText}")
 	}
-	scrubUnusedSettings()
+	logDebug "update() - paused=${paused}"
+	def isActive = !paused 
 
-	logDebug "update() - paused=${paused} activeAlways=${activeAlways} mode=${location.mode} modeChanged=${modeChanged}"
-	def isActive = !paused && (activeAlways || activeModes.any {v -> v == location.mode})
+	if (paused) {
+	    return
+	}
+
+	scheduleNext()
+}
+
+
+def scheduleNext() {
+
+	hasZero = state.dayGroupSettings.any { key, value -> value.any { it.value.toString() == "0" } } || state.valves?.isEmpty()
+	if (hasZero) {
+		log.warn "Please set Time and Duration"
+		return
+	}
 	
-	if (isActive) {
-	    logDebug "Active in mode $location.mode"
-	    if (modeChanged) {
-	        runEvery1Minute(updateValves)
-	    }
-	} else {
-	    logDebug "Inactive in mode $location.mode"
-	    unschedule(updateValves)
-	}
+	Calendar calendar = Calendar.getInstance();
+	def cronDay = calendar.get(Calendar.DAY_OF_WEEK);
 
-	updateValves()
+	timings = buildTimings(cronDay)
+	logDebug "Timings: $cronDay, $timings"
+
+
+/// "Seconds" "Minutes" "Hours" "Day Of Month" "Month" "Day Of Week" "Year"
+/// schedule('0 */10 * ? * *', mymethod, [data: ["myKey":"myValue"]])
+///     schedule(new Date(new Date().time + 5_000), runTest, [data: ["myKey":"myValueFromScheduleTest"]]) // schedules a job 5 seconds from now
+
+	unschedule(schedHandler)
+	schedule('0 7 0 ? * *', scheduleNext) // reschedule the midnight run to schedule that day's work.
+	Date date = new Date()
+	String akaNow = date.format("HH:mm")
+	hasSched = false
+
+	for (timN in timings) {
+	    log.debug "B: $timN.key, $akaNow, $timN.startTime"
+	    sk = timN.key
+	    (sth, stm) = timN.startTime.split(':')
+	    if (akaNow.replace(':', '') > timN.startTime.replace(':', '')) continue
+	    hasSched = true
+	    log.debug "$hasSched: $sk, $sth, $stm"
+	    break;	// schedule the first startTime that's in the future.
+	}
+	log.debug "schedule('0 $stm $sth ? * *', schedHandler, [data: ['dKey': $sk]])"
+///	    schedule('0 ${stm} ${sth} ? * * ?', schedHandler, [data: ['dKey': ${sk}]])
+	if (hasSched) { schedule("7 ${sth} * * * ?", schedHandler, [overwrite: true, data: ["dKey":"$sk"]]) } /// hours are in the minutes for debugging
 }
+
 
 /*
 -----------------------------------------------------------------------------
-Determine and make changes
+Helper/Handler functions
 -----------------------------------------------------------------------------
 */
 
-def updateValves() {
-    if (paused) {
-        return
-    }
-    def isActive = activeAlways || activeModes.any {v -> v == location.mode}
-    def activeChanged = isActive != state.wasActive
+def schedHandler(data) {
+	unschedule(schedHandler)	// don't repeat this day after day.
+	scheduleNext()			// find and then schedule the next startTime
+	cd = data["dKey"]
+	logDebug "schedHandler: $cd, $state.dayGroupSettings"
 
-    def timings = buildTimings()
-    def now = Calendar.getInstance()
-    
-    def nowInPeriod = [:]
-    
-    valves?.each{ dev ->
-        def ID = ""+dev.deviceId
+  // some valves need turning on for their duration.
+	duraT = state.dayGroupSettings."$cd".duraTime
+	log.debug "duraT: $duraT"
 
-        def inPeriod = isInPeriod(timings[ID], now)
-        def isOn = dev.currentValue('valve', true) == 'on'
-        def isOff = !isOn
+	duraMinutes = duraT * 60	// duraTime is in minutes, runIn is in seconds
+  // pass over dayGroup.cd for valves marked true and schedule an off, duraTime later. 
 
-        def wasInPeriod;
-        if (state.wasInPeriod == null) {
-            wasInPeriod = inPeriod
-        } else {
-            wasInPeriod = state.wasInPeriod[ID]
-        }
+// valves = { "912": { "dayGroup": [ "1" ] }, "948": { "dayGroup": [ "1", "2" ] }, "949": { "dayGroup": [ "2" ] }, "950": { "dayGroup": [ "1" ] }, "1061": { "dayGroup": [ "3" ] }, "1062": { "dayGroup": [ "2" ] } }
 
-        nowInPeriod[ID] = inPeriod
-        
-        logDebug "Checking for device ID $ID ... isOn: $isOn, inPeriod: $inPeriod, wasInPeriod: $wasInPeriod"
-        
-        if (activeChanged) {
-            if (isActive) {  // has been activated
-                if (inPeriod) {
-                    switch (settings.periodBehaviour) {
-                        case "duringOn":
-                        case "entryOn":
-                            if (isOff && settings.activateBehaviour == "both" || settings.activateBehaviour == "on") {
-                                logInfo "Turning ON $dev.deviceId : $dev.name / $dev.label (activation during period)"
-                                dev.open();
-                            }
-                            break;
-                        case "duringOff":
-                        case "entryOff":
-                            if (isOn && settings.activateBehaviour == "both" || settings.activateBehaviour == "off") {
-                                logInfo "Turning OFF $dev.deviceId : $dev.name / $dev.label (activation during period)"
-                                dev.close();
-                            }
-                            break;
-                        case "ignore":
-                            break;
-                    }
-                } else { // not in period
-                    switch (settings.noPeriodBehaviour) {
-                        case "duringOn":
-                        case "entryOn":
-                            if (isOff && settings.activateBehaviour == "both" || settings.activateBehaviour == "on") {
-                                logInfo "Turning ON $dev.deviceId : $dev.name / $dev.label (activation outside period)"
-                                dev.open();
-                            }
-                            break;
-                        case "duringOff":
-                        case "entryOff":
-                            if (isOn && settings.activateBehaviour == "both" || settings.activateBehaviour == "off") {
-                                logInfo "Turning OFF $dev.deviceId : $dev.name / $dev.label (activation outside period)"
-                                dev.close();
-                            }
-                            break;
-                        case "ignore":
-                            break;
-                    }
-                }
-            } else { // has been deactivated
-                switch (settings.deactivateBehaviour) {
-                    case "allOn":
-                        logInfo "Turning ON $dev.deviceId : $dev.name / $dev.label (deactivation)"
-                        dev.open();
-                        break;
-                    case "allOff":
-                        logInfo "Turning OFF $dev.deviceId : $dev.name / $dev.label (deactivation)"
-                        dev.close();
-                        break;
-                    case "nothing":
-                        break;
-                }
-            }
-        } else { // no change of activation state
-            if (isActive) {
-                if (inPeriod) {
-                    if (wasInPeriod) {
-                        // during period
-                        if (settings.periodBehaviour == "duringOn" && isOff) {
-                            logInfo "Turning ON $dev.deviceId : $dev.name / $dev.label (during period)"
-                            dev.open()
-                        } else if (settings.periodBehaviour == "duringOff" && isOn) {
-                            logInfo "Turning OFF $dev.deviceId : $dev.name / $dev.label (during period)"
-                            dev.close()
-                        }
-                    } else {
-                        // transitioned into period
-                        if ((settings.periodBehaviour == "entryOn" || settings.periodBehaviour == "duringOn") && isOff) {
-                            logInfo "Turning ON $dev.deviceId : $dev.name ?: $dev.label (entering into period)"
-                            dev.open()
-                        } else if ((settings.periodBehaviour == "entryOff" || settings.periodBehaviour == "duringOff") && isOn) {
-                            logInfo "Turning OFF $dev.deviceId : {$dev.name ?: $dev.label} (entering into period)"
-                            dev.close()
-                        }
-                    }
-                } else {
-                    if (wasInPeriod) {
-                        // transitioned out of period
-                        if ((settings.noPeriodBehaviour == "entryOn" || settings.noPeriodBehaviour == "duringOn") && isOff) {
-                            logInfo "Turning ON $dev.deviceId : $dev.name / $dev.label (entering out of period)"
-                            dev.open()
-                        } else if ((settings.noPeriodBehaviour == "entryOff" || settings.noPeriodBehaviour == "duringOff") && isOn) {
-                            logInfo "Turning OFF $dev.deviceId : $dev.name / $dev.label (entering out of period)"
-                            dev.close()
-                        }
-                    } else {
-                        // during out of period
-                        if (settings.noPeriodBehaviour == "duringOn" && isOff) {
-                            logInfo "Turning ON $dev.deviceId : $dev.name / $dev.label (during out of period)"
-                            dev.open()
-                        } else if (settings.noPeriodBehaviour == "duringOff" && isOn) {
-                            logInfo "Turning OFF $dev.deviceId : $dev.name / $dev.label (during out of period)"
-                            dev.close()
-                        }
-                    }
-                }
-            } else {
-                // inactive. do nothing
-            }
-        }
-    }
-    state.wasInPeriod = nowInPeriod
-    state.wasActive = isActive
-}
+///	def valveStart = state.dayGroup["$sk"].findAll { key, value -> value == true }.keySet()
+	log.debug "valveStart: $valveStart"
 
-/*
------------------------------------------------------------------------------
-Helper functions
------------------------------------------------------------------------------
-*/
+  // void runIn(Long delayInSeconds, String handlerMethod, Map options = null)
+  //     pollInterval = pollIntervals.toInteger()
+  //     runIn(pollInterval, poll)
+	logDebug "runIn($duraMinutes, scheduleDurationHandler, [data: ['vKey': $vk]])"
 
-/* given array of [start,end] timings, and time now, check if should be on
-*/
-def isInPeriod(timings, now) {
-    return true == timings.any{ start,end -> 
-        start.before(now) && end.after(now)
-    }
+//	runIn(duraMinutes, scheduleDurationHandler, [data: ['vKey': $vk]])
 }
 
 
-/* return a map of device IDs to parsed timings (where timings is a list of [start,end] timings */
-def buildTimings() {
-    def timings = [:]
-    
-     // build timings map from settings entries
-    getDeviceTimingStrings { devId, key, value ->
-        try {
-            timings[devId] = parseTimings(value)
-        } catch (e) {
-            logDebug "Failure parsing: $value : "+e.getMessage()
-            timings[devId] = []
-        }
-    }
-    return timings
-}
-
-/* Get time periods string for each device, calling callpack with the device ID, the settings key, and the string */
-def getDeviceTimingStrings(cb) {
-    for (entry in settings) {
-        def match = entry.key =~ /^devTimings-([0-9]+)$/
-        if (match) {
-           def devId = "" + match[0][1]
-           cb(devId, entry.key, entry.value)
-        }
-    }
+def scheduleDurationHandler(data) {
+	unschedule(scheduleDurationHandler)	// don't repeat this day after day.
+	cd = data["vKey"]
+	logDebug "schedDurHandler: $cd"
 }
 
 
-
-def validateTimings(timingString) {
-    while (timingString) {
-        def match = timingString =~ timeRangePattern
-        if (!match) {
-            return false
-        }
-        timingString = match[0][9]
-    }
-    return true
-}
-
-def parseTimings(timingString) {
-    def timings = []
-    
-    def srss = getSunriseAndSunset()
-    today = {}
-    today.now = Calendar.getInstance()
-    today.midday = today.now.clone()
-    today.midday.set(Calendar.HOUR_OF_DAY, 12)
-    today.midday.set(Calendar.MINUTE, 0)
-    today.midday.set(Calendar.SECOND, 0)
-    today.sunrise = Calendar.getInstance()
-    today.sunrise.setTime(srss.sunrise)
-    today.sunset = Calendar.getInstance()
-    today.sunset.setTime(srss.sunset)
-    
-    while (timingString) {
-        def match = timingString =~ timeRangePattern
-        if (match) {
-            (_, sH, sM, sR, sO, eH, eM, eR, eO, remainder) = match[0]
-            (startTime, endTime) = calcStartEndTimes(today, sH, sM, sR, sO, eH, eM, eR, eO)
-            
-            if (startTime.before(endTime)) {
-                timings += [[ startTime, endTime ]]
-            }
-            timingString = remainder
-
-        } else {
-            timingString = ""
-        }
-    }
-    timings.sort()
-    return timings
-}
-
-@Field static def ABS = 0
-@Field static def SUNRISE = 1
-@Field static def SUNSET = 2
-    
-
-def calcStartEndTimes(today, sH, sM, sR, sO, eH, eM, eR, eO) {
-    (start, sType, refStart) = calcTime(today, sH, sM, sR, sO)
-    (end, eType, refEnd)     = calcTime(today, eH, eM, eR, eO)
-
-    // intelligently handle edge cases when one timespec is relative to sunrise or sunset
-    if (sType == ABS && eType == SUNRISE) {
-        if (start.after(today.midday)) {
-            start.add(Calendar.DAY_OF_YEAR, -1)
-        }
-    } else if (sType == SUNRISE && eType == ABS) {
-        // no changes
-    } else if (sType == ABS && eType == SUNSET) {
-        // no changes
-    } else if (sType == SUNSET && eType == ABS) {
-        if (start.before(today.midday)) {
-            start.add(Calendar.DAY_OF_YEAR, +1)
-        }
-    }
-    
-    // if user specified end was specified as being before start time
-    // and wasn't due to user not anticipating variability in sunrise/sunset,
-    // then compensate by shuffling end time to be the next day
-    if (refEnd.before(refStart) && end.before(start)) {        
-        end.add(Calendar.DAY_OF_YEAR,1)
-    }
-
-    // if it was in the past, make it the future
-    if (end.before(today.now)) {
-        start.add(Calendar.DAY_OF_YEAR, 1)
-        end.add(Calendar.DAY_OF_YEAR, 1)
-    }
-
-    return [start,end]
-}
-            
-def calcTime(today, hrs, mins, relTo, offsetMins) {
-    def t = Calendar.getInstance()
-    def type = ABS
-    def ref_t
-    
-    if (hrs != null && mins != null) {
-        t.set(Calendar.HOUR_OF_DAY, hrs.toInteger())
-        t.set(Calendar.MINUTE, mins.toInteger())
-        t.set(Calendar.SECOND, 0)
-
-    } else if (relTo != null) {
-        switch (relTo) {
-            case "sunrise":
-                type=SUNRISE
-                break
-            case "sunset":
-                type=SUNSET
-                break
-            default:
-                throw new Exception("Unrecognised relative-to timespec")
-        }
-
-    } else {
-        throw new Exception("Timespec not valid")
-    }
-
-    if (type != ABS) {
-        t = today[relTo].clone()
-        ref_t = t.clone()
-        if (offsetMins != null && offsetMins != "") {
-            t.add(Calendar.MINUTE, offsetMins.toInteger())
-        }
-    } else{
-        ref_t = t.clone()
-    }
-    
-    // ref_t is the time before offset is applied. Give indication as to users' thinking
-
-    return [t, type, ref_t]
-}
-
-void resetTimers(evt = null) {
-	state.valves.each{k, v ->
-		def dev = valves.find{"$it.id" == k}
-		state.dayGroupSettings[k].startTime = 0
-		state.dayGroupSettings[k].duraTime = 0
-	}
+def buildTimings(cronDayOf) {
+	def aWeek = [1:'7', 2:'1', 3:'2', 4:'3', 5:'4', 6:'5', 7:'6']
+	// cronDayOf week is 1-7 where 1 = sunday and 7 = saturday. BUT this app uses 1 as Monday, sunday is 7
+	def result = state.dayGroup.findAll { key, value -> value[aWeek[cronDayOf]] == true }.keySet()
+	// timings = result.collectEntries { key -> [(key): state.dayGrouptimings[key]]
+	def results = result.collect { key -> [key: key, duraTime: state.dayGroupSettings[key]?.duraTime, startTime: state.dayGroupSettings[key]?.startTime]}.findAll { it.startTime != null }.sort { it.startTime } // Sort by startTime
+	// [[key:2, duraTime:5.0, startTime:06:00]]
 }
 
 
