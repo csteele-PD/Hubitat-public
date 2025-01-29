@@ -42,12 +42,13 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.1	?
  * csteele: v1.0.0	Converted from Matt Hammond's Lighting Schedules
  *                	 Converted to capability.valve from switch 
  *
  */
  
-	public static String version()      {  return "v1.0.0"  }
+	public static String version()      {  return "v1.0.1"  }
 
 
 definition(
@@ -211,7 +212,6 @@ def editMonths() {
 		input "monthPercentage", "decimal", title: "Monthly Percentage", submitOnChange: true, width: 4, range: "1..100", defaultValue: state.month2month[state.dispMonthBtn], newLineAfter: true
 		if(monthPercentage) {
 			state.month2month[state.dispMonthBtn] = monthPercentage
-			state.remove("dispMonthBtn")
 		}
 	}
 }
