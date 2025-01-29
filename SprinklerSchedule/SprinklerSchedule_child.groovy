@@ -47,7 +47,6 @@ This code is licensed as follows:
  *                	 Converted to capability.valve from switch 
  *
  */
-/// DEVELOPMENT FORK
  
 	public static String version()      {  return "v1.0.1"  }
 
@@ -68,11 +67,7 @@ definition(
 preferences {
 	page(name: "main")
 }
-///['1': ['mon':true, 'tue':true, 'wed':true, 'thu':true, 'fri':true, 'sat':true, 'sun':true]
 def main(){
-///    state.dayGroup = null
-///    state.dayGroupSettings = null   
-///    state.valves = null
 	if(state.valves == null) state.valves = [:] 
 	if(state.paused == null) state.paused = false
 	if(state.dayGroupSettings == null) state.dayGroupSettings = ['1':['duraTime':0, 'startTime':0]]
@@ -109,19 +104,14 @@ def main(){
 	  
 	  		paragraph "<b>Select Days into Groups</b>"
 	  		paragraph displayDayGroups()		// display day-of-week groups
-	  //         logDebug "Main A: $state.valves"
 	  		paragraph "<b>Select Period Settings by Group</b>"
-	  		paragraph displayTable()		// display groups for scheduling
-	  //         logDebug "Main B: $state.valves"
-	  
+	  		paragraph displayTable()		// display groups for scheduling	  
 	  		paragraph "<b>Select Valves into Day Groups</b>"
 	  		paragraph displayGrpSched()		// display mapping of Valve to DayGroup
-	  //         logDebug "Main C: $state.valves"
 	  	
 	  		displayDuration()
 	  		displayStartTime()
 	  		selectDayGroup()
-	  //         logDebug "Main D: $state.valves"
 	  		paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
 	      }
 	  }
@@ -174,7 +164,6 @@ String displayDayGroups() {	// display day-of-week groups - Section I
 	    def ID = dev.deviceId
 	    def isOn = dev.currentValue('valve', true) == 'open'
 	    
-///	    logDebug "Checking for device ID $ID ... isOn: $isOn"
       }
 
 	String str = "<script src='https://code.iconify.design/iconify-icon/1.0.0/iconify-icon.min.js'></script>"
@@ -252,10 +241,8 @@ String displayTable() { 	// display groups for scheduling - Section II
 		  String sTime    = state.dayGroupSettings[k]?.startTime ? buttonLink("t$k", state.dayGroupSettings[k].startTime, "black") : buttonLink("t$k", "Set Time", "green")
 		  String dTime    = state.dayGroupSettings[k]?.duraTime
 		  String duraTime = dTime ?  buttonLink("n$k", dTime, "purple") : buttonLink("n$k", "Select", "green")
-//		  String duraTime = state.dayGroupSettings[k]?.duraTime ?  buttonLink("n$k", state.dayGroupSettings[k].duraTime, "purple") : buttonLink("n$k", "Select", "green")  //// why doesn't this work?
 		  String devLink  = "<a href='/device/edit/$k' target='_blank' title='Open Device Page for $dev'>$dev"
 		  String reset    = buttonLink("x$k", "<iconify-icon icon='bx:reset'></iconify-icon>", "black", "20px")
- ///      logDebug "displayTable: $k, $sTime, $duraTime, $reset" ///
 		  str += "<tr style='color:black'>" +
 		  	"<td style='border-right:2px solid black'>$dayGroupNamed</td>" +
 		  	"<td>$sTime</td>" +
@@ -299,7 +286,6 @@ Display level handlers
 */
 def displayStartTime() {
  	if(state.startTimeBtn) {
- 		logDebug "displayStartTime: $state.startTimeBtn, $StartTime, $state.doneTime" ///
 		input "StartTime", "time",   title: "At This Time", submitOnChange: true, width: 4, defaultValue: state.startTimeBtn, newLineAfter: false
 		input "DoneTime$state.startTimeBtn",  "button", title: "  Done with time  ", width: 2, newLineAfter: false
 		input "EraseTime$state.startTimeBtn", "button", title: "  Erase Time  ", width: 2, newLineAfter: true
@@ -339,7 +325,6 @@ def displayDuration() {
 
 def selectDayGroup() {
  	if(state.dayGrpBtn) {
-		logDebug "selectDayGroup: $state.dayGrpBtn, $DayGroup" ///
 		List vars = state.dayGroup.keySet().collect() 
 
 		input "DayGroup", "enum", title: "Sprinkler Group", submitOnChange: true, width: 4, options: vars, newLineAfter: true, multiple: true
@@ -360,7 +345,7 @@ def addDayGroup(evt = null) {
 	s++
 	logDebug "adding another dayGroup map: $s"
 	state.dayGroup += ["$s":dayGroupTemplate] 
-	state.dayGroupSettings += ["$s":['duraTime':0, 'startTime':0]] // !!!! ////
+	state.dayGroupSettings += ["$s":['duraTime':0, 'startTime':0]] 
 }
 
 
@@ -413,21 +398,19 @@ String buttonLink(String btnName, String linkText, color = "#1A77C9", font = "15
 }
 
 void appButtonHandler(btn) {
-	logDebug "appButtonHandler: $btn" ///
 	state.remove("duraTimeBtn")
 	state.remove("dayGrpBtn")
 	state.remove("startTimeBtn")
 	state.remove("dayGroupBtn")
 	state.remove("doneTime")
 	state.remove("eraseTime")
-		app.removeSetting("StartTime") /// ??why??
-		app.removeSetting("DuraTime") /// ??why??
+		app.removeSetting("StartTime") 
+		app.removeSetting("DuraTime") 
 
 	if(btn == "reset") resetTimers()
 	else if(btn == "refresh") state.valves.each{k, v ->
 		def dev = valves.find{"$it.id" == k}
 		if(dev.currentValve == "open") {
-	////		state.dayGroupSettings[k].startTime += now() - state.valves[k].start
 		}
 	}
 	else if ( btn == "btnSchEna")           toggleEnaSchBtn()
@@ -453,7 +436,6 @@ Logging output
 def logDebug(msg) {
 	if (settings.debugEnable) {
         log.debug msg
-///        log.warn msg	///
 	}
 }
 
@@ -534,12 +516,7 @@ def scheduleNext() {
 	def cronDay = calendar.get(Calendar.DAY_OF_WEEK);
 
 	timings = buildTimings(cronDay)
-	logDebug "Timings: $cronDay, $timings"
-
-
-/// "Seconds" "Minutes" "Hours" "Day Of Month" "Month" "Day Of Week" "Year"
-/// schedule('0 */10 * ? * *', mymethod, [data: ["myKey":"myValue"]])
-///     schedule(new Date(new Date().time + 5_000), runTest, [data: ["myKey":"myValueFromScheduleTest"]]) // schedules a job 5 seconds from now
+	logDebug "Timings - DayOfWeek: $cronDay, $timings"
 
 	unschedule(schedHandler)
 	schedule('0 7 0 ? * *', scheduleNext) // reschedule the midnight run to schedule that day's work.
@@ -548,7 +525,7 @@ def scheduleNext() {
 	hasSched = false
 
 	for (timN in timings) {
-	    log.debug "B: $timN.key, $akaNow, $timN.startTime"
+	    log.debug "scheduleNext - DayOfWeeh: $timN.key, HubTime: $akaNow, StartTime: $timN.startTime"
 	    sk = timN.key
 	    (sth, stm) = timN.startTime.split(':')
 	    if (akaNow.replace(':', '') > timN.startTime.replace(':', '')) continue
@@ -557,7 +534,6 @@ def scheduleNext() {
 	    break;	// schedule the first startTime that's in the future.
 	}
 	log.debug "schedule('0 $stm $sth ? * *', schedHandler, [data: ['dKey': $sk]])"
-///	    schedule('0 ${stm} ${sth} ? * * ?', schedHandler, [data: ['dKey': ${sk}]])
 	if (hasSched) { schedule("7 ${sth} * * * ?", schedHandler, [overwrite: true, data: ["dKey":"$sk"]]) } /// hours are in the minutes for debugging
 }
 
@@ -581,14 +557,8 @@ def schedHandler(data) {
 	duraMinutes = duraT * 60	// duraTime is in minutes, runIn is in seconds
   // pass over dayGroup.cd for valves marked true and schedule an off, duraTime later. 
 
-// valves = { "912": { "dayGroup": [ "1" ] }, "948": { "dayGroup": [ "1", "2" ] }, "949": { "dayGroup": [ "2" ] }, "950": { "dayGroup": [ "1" ] }, "1061": { "dayGroup": [ "3" ] }, "1062": { "dayGroup": [ "2" ] } }
-
-///	def valveStart = state.dayGroup["$sk"].findAll { key, value -> value == true }.keySet()
 	log.debug "valveStart: $valveStart"
 
-  // void runIn(Long delayInSeconds, String handlerMethod, Map options = null)
-  //     pollInterval = pollIntervals.toInteger()
-  //     runIn(pollInterval, poll)
 	logDebug "runIn($duraMinutes, scheduleDurationHandler, [data: ['vKey': $vk]])"
 
 //	runIn(duraMinutes, scheduleDurationHandler, [data: ['vKey': $vk]])
@@ -606,9 +576,7 @@ def buildTimings(cronDayOf) {
 	def aWeek = [1:'7', 2:'1', 3:'2', 4:'3', 5:'4', 6:'5', 7:'6']
 	// cronDayOf week is 1-7 where 1 = sunday and 7 = saturday. BUT this app uses 1 as Monday, sunday is 7
 	def result = state.dayGroup.findAll { key, value -> value[aWeek[cronDayOf]] == true }.keySet()
-	// timings = result.collectEntries { key -> [(key): state.dayGrouptimings[key]]
 	def results = result.collect { key -> [key: key, duraTime: state.dayGroupSettings[key]?.duraTime, startTime: state.dayGroupSettings[key]?.startTime]}.findAll { it.startTime != null }.sort { it.startTime } // Sort by startTime
-	// [[key:2, duraTime:5.0, startTime:06:00]]
 }
 
 
