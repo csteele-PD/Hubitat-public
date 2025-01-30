@@ -3,7 +3,7 @@
 Hubitat Elevation Application
 Sprinkler Scheduler (parent application)
 
-    Original: Lighting Schedules https://github.com/matt-hammond-001/hubitat-code
+    Inspiration: Lighting Schedules https://github.com/matt-hammond-001/hubitat-code
     This fork: Sprinkler Schedules https://github.com/csteele-PD/Hubitat-public/tree/master/SprinklerSchedule
 
 -----------------------------------------------------------------------------
@@ -11,6 +11,7 @@ This code is licensed as follows:
 
 	BSD 3-Clause License
 	
+	Copyright (c) 2023, C Steele
 	Copyright (c) 2020, Matt Hammond
 	All rights reserved.
 	
@@ -42,8 +43,8 @@ This code is licensed as follows:
  *
  *
  *
- * csteele: v1.0.1	?
- * csteele: v1.0.0	Converted from Matt Hammond's Lighting Schedules
+ * csteele: v1.0.1	? Incomplete
+ * csteele: v1.0.0	Inspired by Matt Hammond's Lighting Schedules
  *                	 Converted to capability.valve from switch 
  *
  */
@@ -105,7 +106,7 @@ def advancedPage() {
 		section(menuHeader("<b>Adjust valve timing by Month</b>"))
 		{
 			paragraph displayMonths()		// display Monthly percentages
-			paragraph editMonths()
+			  editMonths()
 		}
 		section(menuHeader("<b>Master: Select Days into Groups</b>"))
 		{
@@ -150,7 +151,6 @@ String displayMonths() {	// display Monthly percentages
 String displayDayGroups() {	// display day-of-week groups
 	if(state.dayGroup == null) state.dayGroup = ['1': ['1':true, '2':true, '3':true, '4':true, '5':true, '6':true, '7':true] ] // initial row
 	if(state.dayGroupBtn) {
-		log.debug "displayDayGroups Item: $state.dayGroupBtn"
 		String dgK = state.dayGroupBtn.substring(0, 1); // dayGroupBtn Key
 		String dgI = state.dayGroupBtn.substring(1);   // dayGroupBtn value (mon-sun)
 
@@ -212,7 +212,52 @@ def editMonths() {
 		input "monthPercentage", "decimal", title: "Monthly Percentage", submitOnChange: true, width: 4, range: "1..100", defaultValue: state.month2month[state.dispMonthBtn], newLineAfter: true
 		if(monthPercentage) {
 			state.month2month[state.dispMonthBtn] = monthPercentage
+			state.remove("dispMonthBtn")
+			app.removeSetting("monthPercentage")
+			paragraph "<script>{changeSubmit(this)}</script>"
 		}
+	}
+}
+
+
+def addDayGroup(evt = null) {
+	dayGroupTemplate = ['1':false, '2':false, '3':false, '4':false, '5':false, '6':false, '7':false] // new rows are all empty
+
+	dayGroupSize = state.dayGroup.keySet().size()
+	s = dayGroupSize as int
+	s++
+	log.debug "adding another dayGroup map: $s"
+	state.dayGroup += ["$s":dayGroupTemplate] 
+}
+
+
+def remDayGroup(evt = null) {
+	dayGroupSize = state.dayGroup.keySet().size()
+	dGTemp = [:]
+	dGSetTemp =[:]
+	log.debug "remove another dayGroup map: $dayGroupSize, $evt"
+	if (dayGroupSize >= 2) {
+		state.dayGroup.each {
+		    if (it.key < evt) {
+		        dGTemp[it.key]=it.value
+		    }
+		    else if (it.key > evt) {
+		        k = it.key as Integer
+		        k--
+		        dGTemp[k]=it.value
+		    }
+		}
+		state.dayGroupSettings.each {
+		    if (it.key < evt) {
+		        dGSetTemp[it.key]=it.value
+		    }
+		    else if (it.key > evt) {
+		        k = it.key as Integer
+		        k--
+		        dGSetTemp[k]=it.value
+		    }
+		}
+	state.dayGroup = dGTemp
 	}
 }
 
@@ -272,9 +317,14 @@ String buttonLink(String btnName, String linkText, color = "#1A77C9", font = "15
 
 
 void appButtonHandler(btn) {
+	log.debug "appButtonHandler: $btn" 
 	state.remove("dispMonthBtn")
+	state.remove("dayGroupBtn")
 	app.removeSetting("monthPercentage") 
 	if ( btn.startsWith("m"))  state.dispMonthBtn = btn.minus("m")
+	else if ( btn == "addDGBtn")            addDayGroup()
+	else if ( btn.startsWith("rem")      )  remDayGroup(btn.minus("rem")) 
+	else if ( btn.startsWith("w")        )  state.dayGroupBtn = btn.minus("w")
 }
 
 
