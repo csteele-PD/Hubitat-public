@@ -3,7 +3,7 @@
 Hubitat Elevation Application
 Sprinkler Schedule (child application)
 
-    Original: Lighting Schedules https://github.com/matt-hammond-001/hubitat-code
+    Inspiration: Lighting Schedules https://github.com/matt-hammond-001/hubitat-code
     This fork: Sprinkler Schedules https://github.com/csteele-PD/Hubitat-public/tree/master/SprinklerSchedule
 
 -----------------------------------------------------------------------------
@@ -11,6 +11,7 @@ This code is licensed as follows:
 
 	BSD 3-Clause License
 	
+	Copyright (c) 2023, C Steele
 	Copyright (c) 2020, Matt Hammond
 	All rights reserved.
 	
@@ -42,8 +43,8 @@ This code is licensed as follows:
  *
  *
  *
- * csteele: v1.0.1	?
- * csteele: v1.0.0	Converted from Matt Hammond's Lighting Schedule (child)
+ * csteele: v1.0.1	? Incomplete
+ * csteele: v1.0.0	Inspired by Matt Hammond's Lighting Schedule (child)
  *                	 Converted to capability.valve from switch 
  *
  */
@@ -104,14 +105,18 @@ def main(){
 	  
 	  		paragraph "<b>Select Days into Groups</b>"
 	  		paragraph displayDayGroups()		// display day-of-week groups
+	  //         logDebug "Main A: $state.valves"
 	  		paragraph "<b>Select Period Settings by Group</b>"
-	  		paragraph displayTable()		// display groups for scheduling	  
+	  		paragraph displayTable()		// display groups for scheduling
+	  		  displayDuration()
+	  		  displayStartTime()
+	  //         logDebug "Main B: $state.valves"
+	  
 	  		paragraph "<b>Select Valves into Day Groups</b>"
 	  		paragraph displayGrpSched()		// display mapping of Valve to DayGroup
+	  		  selectDayGroup()
+	  //         logDebug "Main C: $state.valves"
 	  	
-	  		displayDuration()
-	  		displayStartTime()
-	  		selectDayGroup()
 	  		paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
 	      }
 	  }
@@ -150,7 +155,6 @@ Main Page handlers
 
 String displayDayGroups() {	// display day-of-week groups - Section I
 	if(state.dayGroupBtn) {
-		logDebug "displayDayGroups Item: $state.dayGroupBtn"
 		String dgK = state.dayGroupBtn.substring(0, 1); // dayGroupBtn Key
 		String dgI = state.dayGroupBtn.substring(1);   // dayGroupBtn value (mon-sun)
 
@@ -312,7 +316,6 @@ def displayStartTime() {
 
 def displayDuration() {
  	if(state.duraTimeBtn) {
-		logDebug "displayDuration: $state.duraTimeBtn, $DuraTime" ///
 		input "DuraTime", "decimal", title: "Sprinkler Duration", submitOnChange: true, width: 4, range: "1..60", defaultValue: state.dayGroupSettings[state.duraTimeBtn].duraTime, newLineAfter: true
 		if(DuraTime) {
 			state.dayGroupSettings[state.duraTimeBtn].duraTime = DuraTime //validateTimings(DuraTime)
@@ -345,7 +348,7 @@ def addDayGroup(evt = null) {
 	s++
 	logDebug "adding another dayGroup map: $s"
 	state.dayGroup += ["$s":dayGroupTemplate] 
-	state.dayGroupSettings += ["$s":['duraTime':0, 'startTime':0]] 
+	state.dayGroupSettings += ["$s":['duraTime':0, 'startTime':0]] /
 }
 
 
@@ -398,6 +401,7 @@ String buttonLink(String btnName, String linkText, color = "#1A77C9", font = "15
 }
 
 void appButtonHandler(btn) {
+	logDebug "appButtonHandler: $btn" 
 	state.remove("duraTimeBtn")
 	state.remove("dayGrpBtn")
 	state.remove("startTimeBtn")
@@ -560,8 +564,6 @@ def schedHandler(data) {
 	log.debug "valveStart: $valveStart"
 
 	logDebug "runIn($duraMinutes, scheduleDurationHandler, [data: ['vKey': $vk]])"
-
-//	runIn(duraMinutes, scheduleDurationHandler, [data: ['vKey': $vk]])
 }
 
 
@@ -576,7 +578,9 @@ def buildTimings(cronDayOf) {
 	def aWeek = [1:'7', 2:'1', 3:'2', 4:'3', 5:'4', 6:'5', 7:'6']
 	// cronDayOf week is 1-7 where 1 = sunday and 7 = saturday. BUT this app uses 1 as Monday, sunday is 7
 	def result = state.dayGroup.findAll { key, value -> value[aWeek[cronDayOf]] == true }.keySet()
+	// timings = result.collectEntries { key -> [(key): state.dayGrouptimings[key]]
 	def results = result.collect { key -> [key: key, duraTime: state.dayGroupSettings[key]?.duraTime, startTime: state.dayGroupSettings[key]?.startTime]}.findAll { it.startTime != null }.sort { it.startTime } // Sort by startTime
+	// [[key:2, duraTime:5.0, startTime:06:00]]
 }
 
 
