@@ -83,11 +83,17 @@ def mainPage() {
         }
 	  section() {
 	  	input "advancedOption", "bool", title: "Display Options that become common to all Sprinkler Valve Timetables.", required: false, defaultValue: false, submitOnChange: true
+		input name: "quickref", type: "hidden", title:"<a href='https://www.hubitatcommunity.com/QuikRef/sprinklerScheduleManagerInfo/index.html' target='_blank'>Quick Reference ${version()}</a>"
 	  }
 	  if (advancedOption) {
 		  section(menuHeader("Advanced Options Page"))
 		  {
 		  	href "advancedPage", title: "Advanced Options", required: false
+		  }
+		  // Send the current Maps to each Child, exactly like an Update-from-Done would do.
+		  childApps.each {child ->
+		  	child.set2Month(state.month2month) 
+		  	child.set2DayGroup(state.dayGroup)
 		  }
 	  }
     }
@@ -156,7 +162,7 @@ String displayDayGroups() {	// display day-of-week groups
 
 		state.dayGroup."$dgK"."$dgI" = state.dayGroup."$dgK"."$dgI" ? false : true // toggle the state.
 		state.remove("dayGroupBtn") // only once 
-		log.debug "displayDayGroups Item: $dgK.$dgI"
+		logDebug "displayDayGroups Item: $dgK.$dgI"
 	}
 
 	String str = "<script src='https://code.iconify.design/iconify-icon/1.0.0/iconify-icon.min.js'></script>"
@@ -179,7 +185,7 @@ String displayDayGroups() {	// display day-of-week groups
 	String O = "<i class='he-checkbox-unchecked'></i>"
 	String Plus = "<i class='ic--sharp-plus'>+</i>"
 	String Minus = "<i class='trashcan'>-</i>"
-	String addDayGroupBtn = buttonLink("addDGBtn", Plus, "#1A77C9", "")
+	String addDayGroupBtn = buttonLink("addDGBtn", Plus, "#49a37d", "")
 
 	strRows = ""
 	state.dayGroup.each {
@@ -187,11 +193,11 @@ String displayDayGroups() {	// display day-of-week groups
 	        str += strRows
 	        str += "<th>$k</th>"
 	        for (int r = 1; r < 8; r++) { 
-			String dayBoxN = buttonLink("w$k$r", O, "#1A77C9", "")
-			String dayBoxY = buttonLink("w$k$r", X,   "#1A77C9", "")
+			String dayBoxN = buttonLink("w$k$r", O, "#49a37d", "")
+			String dayBoxY = buttonLink("w$k$r", X,   "#49a37d", "")
 	        	str += (dg."$r") ? "<th>$dayBoxY</th>" : "<th>$dayBoxN</th>" 
 	        }
-		  String remDayGroupBtn = buttonLink("rem$k", "<i style=\"font-size:1.125rem\" class=\"material-icons he-bin\"></i>", "#1A77C9", "")
+		  String remDayGroupBtn = buttonLink("rem$k", "<i style=\"font-size:1.125rem\" class=\"material-icons he-bin\"></i>", "#49a37d", "")
 		  str += "<th>$remDayGroupBtn</th>"
 		  strRows = "</tr><tr>" 
 	}
@@ -226,7 +232,7 @@ def addDayGroup(evt = null) {
 	dayGroupSize = state.dayGroup.keySet().size()
 	s = dayGroupSize as int
 	s++
-	log.debug "adding another dayGroup map: $s"
+	logDebug "adding another dayGroup map: $s"
 	state.dayGroup += ["$s":dayGroupTemplate] 
 }
 
@@ -235,7 +241,7 @@ def remDayGroup(evt = null) {
 	dayGroupSize = state.dayGroup.keySet().size()
 	dGTemp = [:]
 	dGSetTemp =[:]
-	log.debug "remove another dayGroup map: $dayGroupSize, $evt"
+	logDebug "remove another dayGroup map: $dayGroupSize, $evt"
 	if (dayGroupSize >= 2) {
 		state.dayGroup.each {
 		    if (it.key < evt) {
@@ -269,27 +275,33 @@ Standard handlers, and mode-change handler
 */
 
 def installed() {
-	log.debug "Installed with settings: ${settings}"
+	logDebug "Installed with settings: ${settings}"
 	initialize()
 }
 
 
 def updated() {
-	log.debug "Updated with settings: ${settings}"
-	unsubscribe()
-	initialize()
+	logDebug "Updated with settings: ${settings}"
+	childApps.each {child ->
+		child.set2Month(state.month2month) 
+		child.set2DayGroup(state.dayGroup)
+	}
 }
 
 
 def initialize() {
 	// nothing needed here, since the child apps will handle preferences/subscriptions
 	// this just logs some messages for demo/information purposes
-	log.debug "there are ${childApps.size()} child smartapps"
+	logDebug "there are ${childApps.size()} child smartapps"
 	childApps.each {child ->
-	    log.debug "child app: ${child.label}"
+		log.debug "child app: ${child.label}"
 	}
 }
 
+
+def logDebug(msg) { // allows either log.debug or logDebug like the Child code.
+	log.debug msg
+}
 
 /*
 -----------------------------------------------------------------------------
@@ -317,7 +329,7 @@ String buttonLink(String btnName, String linkText, color = "#1A77C9", font = "15
 
 
 void appButtonHandler(btn) {
-	log.debug "appButtonHandler: $btn" 
+	logDebug "appButtonHandler: $btn"
 	state.remove("dispMonthBtn")
 	state.remove("dayGroupBtn")
 	app.removeSetting("monthPercentage") 
