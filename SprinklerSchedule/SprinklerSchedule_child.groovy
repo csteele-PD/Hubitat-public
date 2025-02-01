@@ -52,8 +52,6 @@ This code is licensed as follows:
 	public static String version()      {  return "v1.0.1"  }
 
 
-	import groovy.transform.Field
-
 definition(
 	name: "Sprinkler Valve Timetable",
 	namespace: "csteele",
@@ -68,28 +66,34 @@ definition(
 preferences {
 	page(name: "main")
 }
+
 def main(){
 	if(state.valves == null) state.valves = [:] 
 	if(state.paused == null) state.paused = false
 	if(state.dayGroupSettings == null) state.dayGroupSettings = ['1':['duraTime':0, 'startTime':0]]
 	if(state.dayGroup == null) state.dayGroup = ['1': ['1':true, '2':true, '3':true, '4':true, '5':true, '6':true, '7':true] ] // initial row
-	valves.each {
-		   dev ->
-			if(!state.valves["$dev.id"]) {
-				state.valves["$dev.id"] = ['dayGroup':['1']]
-			}
-		}
+
+	valves.each { dev -> if(!state.valves["$dev.id"]) { state.valves["$dev.id"] = ['dayGroup':['1']] } }
 
 	dynamicPage(name: "main", title: "", uninstall: true, install: true){
 	  displayHeader()
 	  section("<h1 style='font-size:1.5em; font-style: italic;'>General</h1>") {
-		input "appLabel",
-		    "text",
-		    title: "<b>Name for this application</b>",
-		    multiple: false,
-		    required: true,
-		    submitOnChange: true
+		label title: "<b>Name for this application</b>", required: false, submitOnChange: true, newLineAfter: true
+			if (!app.label) {
+				app.updateLabel(app.name)
+				atomicState.appDisplayName = app.name
+			}
+			if (app.label.contains('<span ')) {
+				if (atomicState?.appDisplayName != null) {
+					app.updateLabel(atomicState.appDisplayName)
+				} else {
+					String myLabel = app.label.substring(0, app.label.indexOf('<span '))
+					atomicState.appDisplayName = myLabel
+					app.updateLabel(myLabel)
+				}				
+			}
 
+		paragraph "\n<b>Valve Select</b>"
 		input "valves",
                 "capability.valve",
                 title: "Control which valves?",
@@ -97,25 +101,42 @@ def main(){
                 required: false,
                 submitOnChange: true
 
-		paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
+ 		paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
         }
 
+        // provide some feedback on which valves are On
+        String str = ""
+        valves?.each{ dev ->
+        	def ID = dev.deviceId
+        	def isOn = dev.currentValue('valve', true) == 'open'
+        	str += isOn ? "$dev.label is On, " : "$dev.label is Off, "
+        }
+        section(menuHeader("Valve Status")) {
+        	paragraph str
+        }
+        
+	  if (state.month2month) {
+		section(menuHeader("Parent - Advanced Options")) {
+		  	paragraph "Adjust valve timing by Month is active"
+			paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
+		}
+	  }
+
+	
 	  if (valves) {
 	  	section("<h1 style='font-size:1.5em; font-style: italic;'>Schedule</h1>") {
 	  
 	  		paragraph "<b>Select Days into Groups</b>"
-	  		paragraph displayDayGroups()		// display day-of-week groups
-	  //         logDebug "Main A: $state.valves"
+	  		paragraph displayDayGroups()		// display day-of-week groups - Section I
+
 	  		paragraph "<b>Select Period Settings by Group</b>"
-	  		paragraph displayTable()		// display groups for scheduling
+	  		paragraph displayTable()		// display groups for scheduling - Section II
 	  		  displayDuration()
 	  		  displayStartTime()
-	  //         logDebug "Main B: $state.valves"
 	  
 	  		paragraph "<b>Select Valves into Day Groups</b>"
-	  		paragraph displayGrpSched()		// display mapping of Valve to DayGroup
+	  		paragraph displayGrpSched()		// display mapping of Valve to DayGroup - Section III
 	  		  selectDayGroup()
-	  //         logDebug "Main C: $state.valves"
 	  	
 	  		paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
 	      }
@@ -163,12 +184,12 @@ String displayDayGroups() {	// display day-of-week groups - Section I
 		logDebug "displayDayGroups Item: $dgK.$dgI"
 	}
 
-  // provide some feedback on which valves are On
-	valves?.each{ dev ->
-	    def ID = dev.deviceId
-	    def isOn = dev.currentValue('valve', true) == 'open'
-	    
-      }
+	// Master + Local dayGroups get combined using a "deep copy"
+	incM = state.dayGroupMaster.size()
+	incDayGroup = state.dayGroup.collectEntries { k, v -> [(k.toInteger() + incM).toString(), v] } // renumber the entries in the local dayGroup
+	// Merge incremented dayGroup 
+	state.dayGroupMerge = new HashMap<>(state.dayGroupMaster) // make a deep copy
+	state.dayGroupMerge.putAll(incDayGroup)  // "append" local to master
 
 	String str = "<script src='https://code.iconify.design/iconify-icon/1.0.0/iconify-icon.min.js'></script>"
 	str += "<style>.mdl-data-table tbody tr:hover{background-color:inherit} .tstat-col td,.tstat-col th { padding:8px 8px;text-align:center;font-size:12px} .tstat-col td {font-size:15px }" +
@@ -193,18 +214,34 @@ String displayDayGroups() {	// display day-of-week groups - Section I
 	String addDayGroupBtn = buttonLink("addDGBtn", Plus, "#1A77C9", "")
 
 	strRows = ""
+	rowCount = 1
+	state.dayGroupMaster.each {
+	     k, dg -> 
+	        str += strRows
+	        str += "<th>$rowCount</th>"
+	        for (int r = 1; r < 8; r++) { 
+			String dayBoxN = buttonLink("w$rowCount$r", O, "#49a37d", "")
+			String dayBoxY = buttonLink("w$rowCount$r", X,   "#49a37d", "")
+	        	str += (dg."$r") ? "<th>$dayBoxY</th>" : "<th>$dayBoxN</th>" 
+	        }
+	        // no delete button on Master dayGroup rows.
+		  str += "<th>&nbsp;</th>"
+		  strRows = "</tr><tr>" 
+		  rowCount++
+	}
 	state.dayGroup.each {
 	     k, dg -> 
 	        str += strRows
-	        str += "<th>$k</th>"
+	        str += "<th>$rowCount</th>"
 	        for (int r = 1; r < 8; r++) { 
-			String dayBoxN = buttonLink("w$k$r", O, "#1A77C9", "")
-			String dayBoxY = buttonLink("w$k$r", X,   "#1A77C9", "")
+			String dayBoxN = buttonLink("w$rowCount$r", O, "#1A77C9", "")
+			String dayBoxY = buttonLink("w$rowCount$r", X,   "#1A77C9", "")
 	        	str += (dg."$r") ? "<th>$dayBoxY</th>" : "<th>$dayBoxN</th>" 
 	        }
-		  String remDayGroupBtn = buttonLink("rem$k", "<i style=\"font-size:1.125rem\" class=\"material-icons he-bin\"></i>", "#1A77C9", "")
+		  String remDayGroupBtn = buttonLink("rem$rowCount", "<i style=\"font-size:1.125rem\" class=\"material-icons he-bin\"></i>", "#1A77C9", "")
 		  str += "<th>$remDayGroupBtn</th>"
 		  strRows = "</tr><tr>" 
+		  rowCount++
 	}
 	str += "</tr><tr>"
 	str += "<th>$addDayGroupBtn</th><th colspan=4> <- Add new Day Group</th>"
@@ -239,7 +276,7 @@ String displayTable() { 	// display groups for scheduling - Section II
 		"<th>Reset</th>" +
 		"</tr></thead>"
 
-	state.dayGroup.each {
+	state.dayGroupMerge.each {
 	     k, dg -> 
 		  String dayGroupNamed = "Group $k"
 		  String sTime    = state.dayGroupSettings[k]?.startTime ? buttonLink("t$k", state.dayGroupSettings[k].startTime, "black") : buttonLink("t$k", "Set Time", "green")
@@ -270,7 +307,7 @@ String displayGrpSched() {	// display mapping of Valve to DayGroup - Section III
 
 	valves?.sort{it.displayName.toLowerCase()}.each {
 	     dev ->
-		  dx = state.valves[dev.id].dayGroup
+		  dx = state.valves[dev.id].dayGroupMerge
 		  String devLink = "<a href='/device/edit/$dev.id' target='_blank' title='Open Device Page for $dev'>$dev"
 		  String myDG = state.valves[dev.id].dayGroup
 		  String myDayGroup = myDG ? buttonLink("r$dev.id", myDG, "purple") : buttonLink("r$dev.id", "Select", "green")
@@ -291,7 +328,7 @@ Display level handlers
 def displayStartTime() {
  	if(state.startTimeBtn) {
 		input "StartTime", "time",   title: "At This Time", submitOnChange: true, width: 4, defaultValue: state.startTimeBtn, newLineAfter: false
-		input "DoneTime$state.startTimeBtn",  "button", title: "  Done with time  ", width: 2, newLineAfter: false
+		input "DoneTime$state.startTimeBtn",  "button", title: "  Done with time  ", width: 2, newLineAfter: true
 		input "EraseTime$state.startTimeBtn", "button", title: "  Erase Time  ", width: 2, newLineAfter: true
 		if(state.doneTime) {
 			state.dayGroupSettings[state.startTimeBtn].startTime = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSX", StartTime).format('HH:mm')
@@ -328,7 +365,7 @@ def displayDuration() {
 
 def selectDayGroup() {
  	if(state.dayGrpBtn) {
-		List vars = state.dayGroup.keySet().collect() 
+		List vars = state.dayGroupMerge.keySet().collect() 
 
 		input "DayGroup", "enum", title: "Sprinkler Group", submitOnChange: true, width: 4, options: vars, newLineAfter: true, multiple: true
 		if(DayGroup) {
@@ -348,31 +385,32 @@ def addDayGroup(evt = null) {
 	s++
 	logDebug "adding another dayGroup map: $s"
 	state.dayGroup += ["$s":dayGroupTemplate] 
-	state.dayGroupSettings += ["$s":['duraTime':0, 'startTime':0]] /
+	state.dayGroupSettings += ["$s":['duraTime':0, 'startTime':0]] // 
 }
 
 
 def remDayGroup(evt = null) {
-	dayGroupSize = state.dayGroup.keySet().size()
+	dayGroupSize = state.dayGroupMerge.keySet().size()
 	dGTemp = [:]
 	dGSetTemp =[:]
-	logDebug "remove another dayGroup map: $dayGroupSize, $evt"
+	localDGitem = (evt.toInteger() - state.dayGroupMaster.size().toInteger()).toString()
+	logDebug "remove another dayGroup map: $dayGroupSize, $localDGitem"
 	if (dayGroupSize >= 2) {
 		state.dayGroup.each {
-		    if (it.key < evt) {
+		    if (it.key < localDGitem) {
 		        dGTemp[it.key]=it.value
 		    }
-		    else if (it.key > evt) {
+		    else if (it.key > localDGitem) {
 		        k = it.key as Integer
 		        k--
 		        dGTemp[k]=it.value
 		    }
 		}
 		state.dayGroupSettings.each {
-		    if (it.key < evt) {
+		    if (it.key < localDGitem) {
 		        dGSetTemp[it.key]=it.value
 		    }
-		    else if (it.key > evt) {
+		    else if (it.key > localDGitem) {
 		        k = it.key as Integer
 		        k--
 		        dGSetTemp[k]=it.value
@@ -401,7 +439,6 @@ String buttonLink(String btnName, String linkText, color = "#1A77C9", font = "15
 }
 
 void appButtonHandler(btn) {
-	logDebug "appButtonHandler: $btn" 
 	state.remove("duraTimeBtn")
 	state.remove("dayGrpBtn")
 	state.remove("startTimeBtn")
@@ -438,15 +475,15 @@ Logging output
 */
 
 def logDebug(msg) {
-	if (settings.debugEnable) {
-        log.debug msg
-	}
+	if (settings.debugEnable) { log.debug msg }
+}
+
+def logWarn(msg) { 
+	log.warn msg
 }
 
 def logInfo(msg) {
-    if (settings.infoEnable) {
-        log.info msg
-    }
+    if (settings.infoEnable) { log.info msg }
 }
 
 
@@ -462,10 +499,9 @@ def initialize() {		// unused?
 	update()
 }
 
+
 def installed() {
 	logDebug "installed()"
-	state.wasInPeriod = [:]
-	state.wasActive = null
 	update()
 }
 
@@ -481,8 +517,21 @@ def uninstalled() {
 }
 
 
+def set2Month(monthIn) { 
+	state.month2month = monthIn
+	logInfo "MonthIn update from Parent."
+}
+
+
+def set2DayGroup(dayGroupIn) { 
+	state.dayGroupMaster = dayGroupIn
+	logInfo "DayGroup update from Parent."
+}
+
+
 /*
 -----------------------------------------------------------------------------
+UI code above here, background valve on/off code below.
 Whenever there is a change/update
 -----------------------------------------------------------------------------
 */
@@ -529,16 +578,16 @@ def scheduleNext() {
 	hasSched = false
 
 	for (timN in timings) {
-	    log.debug "scheduleNext - DayOfWeeh: $timN.key, HubTime: $akaNow, StartTime: $timN.startTime"
+	    logDebug "scheduleNext - DayOfWeek: $timN.key, HubTime: $akaNow, StartTime: $timN.startTime"
 	    sk = timN.key
 	    (sth, stm) = timN.startTime.split(':')
 	    if (akaNow.replace(':', '') > timN.startTime.replace(':', '')) continue
 	    hasSched = true
-	    log.debug "$hasSched: $sk, $sth, $stm"
+	    logDebug "$hasSched: $sk, $sth, $stm"
 	    break;	// schedule the first startTime that's in the future.
 	}
-	log.debug "schedule('0 $stm $sth ? * *', schedHandler, [data: ['dKey': $sk]])"
-	if (hasSched) { schedule("7 ${sth} * * * ?", schedHandler, [overwrite: true, data: ["dKey":"$sk"]]) } /// hours are in the minutes for debugging
+	logDebug "schedule('0 $stm $sth ? * *', schedHandler, [data: ['dKey': $sk]]), hasSched: $hasSched"
+	if (hasSched) schedule('0 ${stm} ${sth} ? * * ?', schedHandler, [data: ["dKey":"$sk"]])
 }
 
 
@@ -550,34 +599,64 @@ Helper/Handler functions
 
 def schedHandler(data) {
 	unschedule(schedHandler)	// don't repeat this day after day.
-	scheduleNext()			// find and then schedule the next startTime
-	cd = data["dKey"]
-	logDebug "schedHandler: $cd, $state.dayGroupSettings"
+	runIn(5, scheduleNext)			// find and then schedule the next startTime
+	cd = data["dKey"] as String
+	valve2start = state.valves.findAll { it.value.dayGroupMerge.contains(cd) }.keySet()
+	log.debug "schedHandler: $cd, $state.dayGroupSettings, valve2start: $valve2start"
+
+	vk = valve2start[0] as String
+	if (vk != null) {
+		valve2start = valve2start.tail()
+	} else {
+		valve2start = ""
+	}
 
   // some valves need turning on for their duration.
+	valves.find { it.id == "$vk" }?.open()
+	logDebug "valve $vk open"
+
 	duraT = state.dayGroupSettings."$cd".duraTime
-	log.debug "duraT: $duraT"
+	duraSeconds = 60 * duraT	// duraTime is in minutes, runIn is in seconds
+	logDebug "runIn($duraSeconds, scheduleDurationHandler, [vKey: $vk, dS: $duraSeconds, dV: $valve2start])"
 
-	duraMinutes = duraT * 60	// duraTime is in minutes, runIn is in seconds
-  // pass over dayGroup.cd for valves marked true and schedule an off, duraTime later. 
-
-	log.debug "valveStart: $valveStart"
-
-	logDebug "runIn($duraMinutes, scheduleDurationHandler, [data: ['vKey': $vk]])"
+	runIn(duraSeconds, scheduleDurationHandler, [data: [vKey: "$vk", dS: "$duraSeconds", dV: "$valve2start"]])  
 }
 
 
 def scheduleDurationHandler(data) {
 	unschedule(scheduleDurationHandler)	// don't repeat this day after day.
-	cd = data["vKey"]
-	logDebug "schedDurHandler: $cd"
+	cd1 = data.vKey as String
+	duraSeconds = data.dS
+	valve2start = data.dV as String
+	logDebug "schedDurHandler: valveStop: $data.vKey, in Duration: $duraSeconds, next: $valve2start"
+
+	// stop the valve and start the next, if any.
+	valves.find { it.id == "$cd1" }?.close()
+	logDebug "Valve $cd1 close"
+
+	//valves*.close()	// close all the valves
+    
+	// add an interstitial delay to allow the valves to close and recover before opening next.
+
+
+	if (valve2start) {
+		valve2start = valve2start.replaceAll(/\[|\]/, '').split(',').collect { it.trim().toInteger() }
+		vk = valve2start[0] as String
+		if (vk != null) {
+			valve2start = valve2start.tail()
+			valves.find { it.id == "$vk" }?.open()
+			logDebug "valve $vk open"
+
+			runIn(duraSeconds, scheduleDurationHandler, [data: [vKey: "$vk", dS: "$duraSeconds", dV: "$valve2start"]])
+		}
+	}
 }
 
 
 def buildTimings(cronDayOf) {
 	def aWeek = [1:'7', 2:'1', 3:'2', 4:'3', 5:'4', 6:'5', 7:'6']
 	// cronDayOf week is 1-7 where 1 = sunday and 7 = saturday. BUT this app uses 1 as Monday, sunday is 7
-	def result = state.dayGroup.findAll { key, value -> value[aWeek[cronDayOf]] == true }.keySet()
+	def result = state.dayGroupMerge.findAll { key, value -> value[aWeek[cronDayOf]] == true }.keySet()
 	// timings = result.collectEntries { key -> [(key): state.dayGrouptimings[key]]
 	def results = result.collect { key -> [key: key, duraTime: state.dayGroupSettings[key]?.duraTime, startTime: state.dayGroupSettings[key]?.startTime]}.findAll { it.startTime != null }.sort { it.startTime } // Sort by startTime
 	// [[key:2, duraTime:5.0, startTime:06:00]]
@@ -596,4 +675,5 @@ def displayHeader() {
 	}
 }
 
+String menuHeader(titleText){"<div style=\"width:102%;background-color:#696969;color:white;padding:4px;font-weight: bold;box-shadow: 1px 2px 2px #bababa;margin-left: -10px\">${titleText}</div>"}
 def getThisCopyright(){"&copy; 2023 C Steele"}
