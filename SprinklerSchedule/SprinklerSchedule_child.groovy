@@ -43,7 +43,7 @@ This code is licensed as follows:
  *
  *
  *
- * csteele: v1.0.1	? Incomplete
+ * csteele: v1.0.1	? Added month2month and dayGroupMaster from Parent
  * csteele: v1.0.0	Inspired by Matt Hammond's Lighting Schedule (child)
  *                	 Converted to capability.valve from switch 
  *
@@ -56,7 +56,7 @@ definition(
 	name: "Sprinkler Valve Timetable",
 	namespace: "csteele",
 	parent: "csteele:Sprinkler Schedule Manager",
-	author: "C Steele, Matt Hammond",
+	author: "C Steele",
 	description: "Controls valves to a timing schedule",
 	documentationLink: "https://github.com//README.md",
 	iconUrl: "",
@@ -68,17 +68,12 @@ preferences {
 }
 
 def main(){
-	if(state.valves == null) state.valves = [:] 
-	if(state.paused == null) state.paused = false
-	if(state.dayGroupSettings == null) state.dayGroupSettings = ['1':['duraTime':0, 'startTime':0]]
-	if(state.dayGroup == null) state.dayGroup = ['1': ['1':true, '2':true, '3':true, '4':true, '5':true, '6':true, '7':true] ] // initial row
-
-	valves.each { dev -> if(!state.valves["$dev.id"]) { state.valves["$dev.id"] = ['dayGroup':['1']] } }
-
+	init() 	// pre-populate any empty elements
 	dynamicPage(name: "main", title: "", uninstall: true, install: true){
+	  updateMyLabel()
 	  displayHeader()
 	  section("<h1 style='font-size:1.5em; font-style: italic;'>General</h1>") {
-		label title: "<b>Name for this application</b>", required: false, submitOnChange: true, newLineAfter: true
+		label title: "<b>Name for this application</b>", required: false, submitOnChange: true
 			if (!app.label) {
 				app.updateLabel(app.name)
 				atomicState.appDisplayName = app.name
@@ -159,7 +154,7 @@ def main(){
         }
 
 	  if (true) {
-            enaDis = state.paused ? "Disabled" : "Enabled" 
+            enaDis = atomicState.paused ? "Disabled" : "Enabled" 
             section("<h1 style='font-size:1.5em; font-style: italic;'>Enable</h1>") {
 		    input "btnSchEna", "button", title: "Schedule $enaDis", width: 3
        	    paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
@@ -185,11 +180,14 @@ String displayDayGroups() {	// display day-of-week groups - Section I
 	}
 
 	// Master + Local dayGroups get combined using a "deep copy"
-	incM = state.dayGroupMaster.size()
-	incDayGroup = state.dayGroup.collectEntries { k, v -> [(k.toInteger() + incM).toString(), v] } // renumber the entries in the local dayGroup
-	// Merge incremented dayGroup 
-	state.dayGroupMerge = new HashMap<>(state.dayGroupMaster) // make a deep copy
-	state.dayGroupMerge.putAll(incDayGroup)  // "append" local to master
+	if (state.dayGroupMaster) {
+		incDayGroup = state.dayGroup.collectEntries { k, v -> [(k.toInteger() + incM).toString(), v] } // renumber the entries in the local dayGroup
+		// Merge incremented dayGroup 
+		state.dayGroupMerge = new HashMap<>(state.dayGroupMaster) // make a deep copy
+		state.dayGroupMerge.putAll(incDayGroup)  // "append" local to master
+	} else {
+	    state.dayGroupMerge = new HashMap<>(state.dayGroup) // make a deep copy
+	}   
 
 	String str = "<script src='https://code.iconify.design/iconify-icon/1.0.0/iconify-icon.min.js'></script>"
 	str += "<style>.mdl-data-table tbody tr:hover{background-color:inherit} .tstat-col td,.tstat-col th { padding:8px 8px;text-align:center;font-size:12px} .tstat-col td {font-size:15px }" +
@@ -423,8 +421,8 @@ def remDayGroup(evt = null) {
 
 
 def toggleEnaSchBtn(evt) {
-	state.paused = state.paused ? false : true
- logDebug "toggle: $state.paused"
+	atomicState.paused = atomicState.paused ? false : true
+ logDebug "toggle: $atomicState.paused"
 }
 
 
@@ -439,7 +437,8 @@ String buttonLink(String btnName, String linkText, color = "#1A77C9", font = "15
 }
 
 void appButtonHandler(btn) {
-	state.remove("duraTimeBtn")
+	// only one button can be pressed, remove their states, since "btn" contains the only valid one.
+	state.remove("duraTimeBtn") 
 	state.remove("dayGrpBtn")
 	state.remove("startTimeBtn")
 	state.remove("dayGroupBtn")
@@ -449,11 +448,6 @@ void appButtonHandler(btn) {
 		app.removeSetting("DuraTime") 
 
 	if(btn == "reset") resetTimers()
-	else if(btn == "refresh") state.valves.each{k, v ->
-		def dev = valves.find{"$it.id" == k}
-		if(dev.currentValve == "open") {
-		}
-	}
 	else if ( btn == "btnSchEna")           toggleEnaSchBtn()
 	else if ( btn == "addDGBtn")            addDayGroup()
 	else if ( btn.startsWith("rem")      )  remDayGroup(btn.minus("rem")) 
@@ -496,6 +490,7 @@ Standard handlers, and mode-change handler
 def initialize() {		// unused?
 	logDebug "initialize()"
 	unsubscribe()
+	init()
 	update()
 }
 
@@ -529,10 +524,22 @@ def set2DayGroup(dayGroupIn) {
 }
 
 
+def init() {
+	logDebug "Init()"
+	if(state.valves == null) state.valves = [:] 
+	if(atomicState.paused == null) atomicState.paused = false
+	if(state.inCycle == null) state.inCycle = false
+	if(state.dayGroupSettings == null) state.dayGroupSettings = ['1':['duraTime':0, 'startTime':0]]
+	if(state.dayGroup == null) state.dayGroup = ['1': ['1':true, '2':true, '3':true, '4':true, '5':true, '6':true, '7':true] ] // initial row
+	if(state.month2month == null) state.month2month = [:]
+	valves.each { dev -> if(!state.valves["$dev.id"]) { state.valves["$dev.id"] = ['dayGroup':['1']] } }
+}
+
+
 /*
------------------------------------------------------------------------------
-UI code above here, background valve on/off code below.
-Whenever there is a change/update
+---------------    UI code above here, background valve on/off code below.    --------------------------------------------------------------
+
+   Whenever there is a change/update
 -----------------------------------------------------------------------------
 */
 
@@ -558,18 +565,22 @@ def update() {
 
 
 def scheduleNext() {
-
 	hasZero = state.dayGroupSettings.any { key, value -> value.any { it.value.toString() == "0" } } || state.valves?.isEmpty()
 	if (hasZero) {
 		log.warn "Please set Time and Duration"
 		return
 	}
 	
+	log.info "Checking $appName Schedule"
 	Calendar calendar = Calendar.getInstance();
 	def cronDay = calendar.get(Calendar.DAY_OF_WEEK);
 
 	timings = buildTimings(cronDay)
 	logDebug "Timings - DayOfWeek: $cronDay, $timings"
+	if (!timings) {
+		logWarn "Nothing scheduled for Today."
+		return
+	}
 
 	unschedule(schedHandler)
 	schedule('0 7 0 ? * *', scheduleNext) // reschedule the midnight run to schedule that day's work.
@@ -583,11 +594,10 @@ def scheduleNext() {
 	    (sth, stm) = timN.startTime.split(':')
 	    if (akaNow.replace(':', '') > timN.startTime.replace(':', '')) continue
 	    hasSched = true
-	    logDebug "$hasSched: $sk, $sth, $stm"
-	    break;	// schedule the first startTime that's in the future.
+	    break;	// quit the for loop on a schedule of first startTime that's in the future.
 	}
 	logDebug "schedule('0 $stm $sth ? * *', schedHandler, [data: ['dKey': $sk]]), hasSched: $hasSched"
-	if (hasSched) schedule('0 ${stm} ${sth} ? * * ?', schedHandler, [data: ["dKey":"$sk"]])
+	if (hasSched) { schedule("0 ${stm} ${sth} ? * *", schedHandler, [data: ["dKey":"$sk"]])  }
 }
 
 
@@ -599,56 +609,65 @@ Helper/Handler functions
 
 def schedHandler(data) {
 	unschedule(schedHandler)	// don't repeat this day after day.
-	runIn(5, scheduleNext)			// find and then schedule the next startTime
+	logInfo "Running $appName Schedule"
 	cd = data["dKey"] as String
-	valve2start = state.valves.findAll { it.value.dayGroupMerge.contains(cd) }.keySet()
-	log.debug "schedHandler: $cd, $state.dayGroupSettings, valve2start: $valve2start"
+	valve2start = state.valves.findAll { it.value.dayGroup.contains(cd) }.keySet()
+	logDebug "schedHandler: $cd, $state.dayGroupSettings, valve2start: $valve2start"
 
 	vk = valve2start[0] as String
 	if (vk != null) {
 		valve2start = valve2start.tail()
-	} else {
-		valve2start = ""
 	}
 
   // some valves need turning on for their duration.
 	valves.find { it.id == "$vk" }?.open()
-	logDebug "valve $vk open"
-
+	logInfo "valve $vk open"
+	state.inCycle = true
+	atomicState.cycleStart = now()
+	updateMyLabel()
+    
 	duraT = state.dayGroupSettings."$cd".duraTime
-	duraSeconds = 60 * duraT	// duraTime is in minutes, runIn is in seconds
-	logDebug "runIn($duraSeconds, scheduleDurationHandler, [vKey: $vk, dS: $duraSeconds, dV: $valve2start])"
+	currentMonth = new Date().format("M") 	// Get the current month as a number (1-12)
+	percentage = month2month ? month2month[currentMonth].toDouble() / 100 : 1  // Lookup the percent in month2month or 1 
+	dura = 60 * duraT * percentage		// duraTime is in minutes, runIn is in seconds
+	duraSeconds = dura.toInteger()
+    logDebug "runIn($duraSeconds, scheduleDurationHandler, [vKey: $vk, dS: $duraSeconds, dV: $valve2start])"
 
-	runIn(duraSeconds, scheduleDurationHandler, [data: [vKey: "$vk", dS: "$duraSeconds", dV: "$valve2start"]])  
+ 	runIn(duraSeconds, scheduleDurationHandler, [data: [vKey: "$vk", dS: "$duraSeconds", dV: "$valve2start"]]) 
 }
 
 
 def scheduleDurationHandler(data) {
 	unschedule(scheduleDurationHandler)	// don't repeat this day after day.
-	cd1 = data.vKey as String
-	duraSeconds = data.dS
+	cd = data.vKey as String
+	duraSeconds = data.dS.toInteger()
 	valve2start = data.dV as String
 	logDebug "schedDurHandler: valveStop: $data.vKey, in Duration: $duraSeconds, next: $valve2start"
 
 	// stop the valve and start the next, if any.
-	valves.find { it.id == "$cd1" }?.close()
-	logDebug "Valve $cd1 close"
+	valves.find { it.id == "$cd" }?.close()
+	logInfo "Valve $cd close"
 
 	//valves*.close()	// close all the valves
     
 	// add an interstitial delay to allow the valves to close and recover before opening next.
 
 
-	if (valve2start) {
+	if (valve2start != '[]') {
 		valve2start = valve2start.replaceAll(/\[|\]/, '').split(',').collect { it.trim().toInteger() }
 		vk = valve2start[0] as String
 		if (vk != null) {
 			valve2start = valve2start.tail()
 			valves.find { it.id == "$vk" }?.open()
-			logDebug "valve $vk open"
+			logInfo "valve $vk open"
 
 			runIn(duraSeconds, scheduleDurationHandler, [data: [vKey: "$vk", dS: "$duraSeconds", dV: "$valve2start"]])
 		}
+	} else {
+		state.inCycle = false
+		atomicState.cycleEnd = now()
+		runIn(30, scheduleNext)			// find and then schedule the next startTime for today
+		updateMyLabel()
 	}
 }
 
@@ -660,6 +679,67 @@ def buildTimings(cronDayOf) {
 	// timings = result.collectEntries { key -> [(key): state.dayGrouptimings[key]]
 	def results = result.collect { key -> [key: key, duraTime: state.dayGroupSettings[key]?.duraTime, startTime: state.dayGroupSettings[key]?.startTime]}.findAll { it.startTime != null }.sort { it.startTime } // Sort by startTime
 	// [[key:2, duraTime:5.0, startTime:06:00]]
+}
+
+void updateMyLabel() {
+	String flag = '<span '
+	
+	// Display Ecobee connection status as part of the label...
+	String myLabel = atomicState.appDisplayName
+	if ((myLabel == null) || !app.label.startsWith(myLabel)) {
+		myLabel = app.label ?: app.name
+		if (!myLabel.contains(flag)) atomicState.appDisplayName = myLabel
+	} 
+	if (myLabel.contains(flag)) {
+		// strip off any connection status tag
+		myLabel = myLabel.substring(0, myLabel.indexOf(flag))
+		atomicState.appDisplayName = myLabel
+	}
+	String newLabel
+	if (atomicState.paused) {
+		newLabel = myLabel + '<span style="color:Crimson"> (paused)</span>'
+	} else if (atomicState.inCycle) {
+		String beganAt = atomicState.cycleStart ? "started " + fixDateTimeString(atomicState.cycleStart) : 'running'
+		newLabel = myLabel + "<span style=\"color:Green\"> (${beganAt})</span>"
+	} else if ((atomicState.inCycle != null) && (atomicState.inCycle == false)) {
+		String endedAt = atomicState.cycleEnd ? "finished " + fixDateTimeString(atomicState.cycleEnd) : 'idle'
+		newLabel = myLabel + "<span style=\"color:Green\"> (${endedAt})</span>"
+	} else {
+		newLabel = myLabel
+	}
+	if (app.label != newLabel) app.updateLabel(newLabel)
+}
+
+
+String fixDateTimeString( eventDate) {
+	def today = new Date(now()).clearTime()
+	def target = new Date(eventDate).clearTime()
+	
+	String resultStr = ''
+	String myDate = ''
+	String myTime = ''
+	boolean showTime = true
+	
+	if (target == today) {
+		myDate = 'today'	
+	} else if (target == today-1) {
+		myDate = 'yesterday'
+	} else if (target == today+1) {
+		myDate = 'tomorrow'
+	} else if (dateStr == '2035-01-01' ) {		// to Infinity
+		myDate = 'a long time from now'
+		showTime = false
+	} else {
+		myDate = 'on '+target.format('MM-dd')
+	}	 
+	if (showTime) {
+		myTime = new Date(eventDate).format('h:mma').toLowerCase()
+	}
+	if (myDate || myTime) {
+		resultStr = myTime ? "${myDate} at ${myTime}" : "${myDate}"
+	}
+	if (debugOutput) { logDebug "banner: ${resultStr}"}
+	return resultStr
 }
 
 
