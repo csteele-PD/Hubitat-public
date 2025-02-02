@@ -43,7 +43,7 @@ This code is licensed as follows:
  *
  *
  *
- * csteele: v1.0.1	? Incomplete
+ * csteele: v1.0.1	? Send month2month and dayGroup to child Apps
  * csteele: v1.0.0	Inspired by Matt Hammond's Lighting Schedules
  *                	 Converted to capability.valve from switch 
  *
@@ -51,11 +51,10 @@ This code is licensed as follows:
  
 	public static String version()      {  return "v1.0.1"  }
 
-
 definition(
 	name: "Sprinkler Schedule Manager",
 	namespace: "csteele",
-	author: "C Steele, Matt Hammond",
+	author: "C Steele",
 	description: "Controls switches to a timing schedule",
 	documentationLink: "https://github.com//README.md",
 	singleInstance: true,
@@ -74,13 +73,14 @@ preferences {
 def mainPage() {
 	dynamicPage(name: "mainPage", title: "", install: true, uninstall: true, submitOnChange: true) {
 	  displayHeader()
-        section {
+        section() {
             app (name: "sprinklerTimetable",
                  appName: "Sprinkler Valve Timetable",
                  namespace: "csteele",
                  title: "Create New Sprinkler Schedule",
                  multiple: true)
         }
+
 	  section() {
 	  	input "advancedOption", "bool", title: "Display Options that become common to all Sprinkler Valve Timetables.", required: false, defaultValue: false, submitOnChange: true
 		input name: "quickref", type: "hidden", title:"<a href='https://www.hubitatcommunity.com/QuikRef/sprinklerScheduleManagerInfo/index.html' target='_blank'>Quick Reference ${version()}</a>"
@@ -93,7 +93,7 @@ def mainPage() {
 		  // Send the current Maps to each Child, exactly like an Update-from-Done would do.
 		  childApps.each {child ->
 		  	child.set2Month(state.month2month) 
-		  	child.set2DayGroup(state.dayGroup)
+		  	child.set2DayGroup(state.dayGroup) 
 		  }
 	  }
     }
@@ -284,7 +284,7 @@ def updated() {
 	logDebug "Updated with settings: ${settings}"
 	childApps.each {child ->
 		child.set2Month(state.month2month) 
-		child.set2DayGroup(state.dayGroup)
+		child.set2DayGroup(state.dayGroup) 
 	}
 }
 
@@ -329,10 +329,9 @@ String buttonLink(String btnName, String linkText, color = "#1A77C9", font = "15
 
 
 void appButtonHandler(btn) {
-	logDebug "appButtonHandler: $btn"
 	state.remove("dispMonthBtn")
 	state.remove("dayGroupBtn")
-	app.removeSetting("monthPercentage") 
+	app.removeSetting("monthPercentage")
 	if ( btn.startsWith("m"))  state.dispMonthBtn = btn.minus("m")
 	else if ( btn == "addDGBtn")            addDayGroup()
 	else if ( btn.startsWith("rem")      )  remDayGroup(btn.minus("rem")) 
