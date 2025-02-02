@@ -70,96 +70,96 @@ preferences {
 def main(){
 	init() 	// pre-populate any empty elements
 	dynamicPage(name: "main", title: "", uninstall: true, install: true){
-	  updateMyLabel()
-	  displayHeader()
-	  section("<h1 style='font-size:1.5em; font-style: italic;'>General</h1>") {
-		label title: "<b>Name for this application</b>", required: false, submitOnChange: true
-			if (!app.label) {
-				app.updateLabel(app.name)
-				atomicState.appDisplayName = app.name
+		updateMyLabel()
+		displayHeader()
+		section("<h1 style='font-size:1.5em; font-style: italic;'>General</h1>") {
+			label title: "<b>Name for this application</b>", required: false, submitOnChange: true
+				if (!app.label) {
+					app.updateLabel(app.name)
+					atomicState.appDisplayName = app.name
+				}
+				if (app.label.contains('<span ')) {
+					if (atomicState?.appDisplayName != null) {
+						app.updateLabel(atomicState.appDisplayName)
+					} else {
+						String myLabel = app.label.substring(0, app.label.indexOf('<span '))
+						atomicState.appDisplayName = myLabel
+						app.updateLabel(myLabel)
+					}				
+				}
+	
+			paragraph "\n<b>Valve Select</b>"
+			input "valves",
+      	        "capability.valve",
+      	        title: "Control which valves?",
+      	        multiple: true,
+      	        required: false,
+      	        submitOnChange: true
+	
+ 			paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
+      	}
+	
+      	// provide some feedback on which valves are On
+      	String str = ""
+      	valves?.each{ dev ->
+      		def ID = dev.deviceId
+      		def isOn = dev.currentValue('valve', true) == 'open'
+      		str += isOn ? "$dev.label is On, " : "$dev.label is Off, "
+      	}
+      	section(menuHeader("Valve Status")) {
+      		paragraph str
+      	}
+      	
+		if (state.month2month) {
+			section(menuHeader("Parent - Advanced Options")) {
+			  	paragraph "Adjust valve timing by Month is active"
+				paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
 			}
-			if (app.label.contains('<span ')) {
-				if (atomicState?.appDisplayName != null) {
-					app.updateLabel(atomicState.appDisplayName)
-				} else {
-					String myLabel = app.label.substring(0, app.label.indexOf('<span '))
-					atomicState.appDisplayName = myLabel
-					app.updateLabel(myLabel)
-				}				
-			}
-
-		paragraph "\n<b>Valve Select</b>"
-		input "valves",
-                "capability.valve",
-                title: "Control which valves?",
-                multiple: true,
-                required: false,
-                submitOnChange: true
-
- 		paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
-        }
-
-        // provide some feedback on which valves are On
-        String str = ""
-        valves?.each{ dev ->
-        	def ID = dev.deviceId
-        	def isOn = dev.currentValue('valve', true) == 'open'
-        	str += isOn ? "$dev.label is On, " : "$dev.label is Off, "
-        }
-        section(menuHeader("Valve Status")) {
-        	paragraph str
-        }
-        
-	  if (state.month2month) {
-		section(menuHeader("Parent - Advanced Options")) {
-		  	paragraph "Adjust valve timing by Month is active"
+		}
+	
+		
+		if (valves) {
+			section("<h1 style='font-size:1.5em; font-style: italic;'>Schedule</h1>") {
+		
+				paragraph "<b>Select Days into Groups</b>"
+				paragraph displayDayGroups()		// display day-of-week groups - Section I
+	
+				paragraph "<b>Select Period Settings by Group</b>"
+				paragraph displayTable()		// display groups for scheduling - Section II
+				  displayDuration()
+				  displayStartTime()
+		
+				paragraph "<b>Select Valves into Day Groups</b>"
+				paragraph displayGrpSched()		// display mapping of Valve to DayGroup - Section III
+				  selectDayGroup()
+			
+				paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
+		    }
+		}
+		section("<h1 style='font-size:1.5em; font-style: italic;'>Logging</h1>") {
+			input "infoEnable",
+      			"bool",
+      			title: "Enable activity logging",
+      			required: false,
+      			defaultValue: true
+      	}
+	
+		section("<h1 style='font-size:1.5em; font-style: italic;'>Debugging</h1>") {
+			input "debugEnable",
+				"bool",
+				title: "Enable debug logging", 
+				required: false,
+				defaultValue: false
 			paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
 		}
-	  }
-
 	
-	  if (valves) {
-	  	section("<h1 style='font-size:1.5em; font-style: italic;'>Schedule</h1>") {
-	  
-	  		paragraph "<b>Select Days into Groups</b>"
-	  		paragraph displayDayGroups()		// display day-of-week groups - Section I
-
-	  		paragraph "<b>Select Period Settings by Group</b>"
-	  		paragraph displayTable()		// display groups for scheduling - Section II
-	  		  displayDuration()
-	  		  displayStartTime()
-	  
-	  		paragraph "<b>Select Valves into Day Groups</b>"
-	  		paragraph displayGrpSched()		// display mapping of Valve to DayGroup - Section III
-	  		  selectDayGroup()
-	  	
-	  		paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
-	      }
-	  }
-	  section("<h1 style='font-size:1.5em; font-style: italic;'>Logging</h1>") {
-            input "infoEnable",
-                "bool",
-                title: "Enable activity logging",
-                required: false,
-                defaultValue: true
-        }
-
-	  section("<h1 style='font-size:1.5em; font-style: italic;'>Debugging</h1>") {
-            input "debugEnable",
-                "bool",
-                title: "Enable debug logging", 
-                required: false,
-                defaultValue: false
-       	 paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
-        }
-
-	  if (true) {
-            enaDis = atomicState.paused ? "Disabled" : "Enabled" 
-            section("<h1 style='font-size:1.5em; font-style: italic;'>Enable</h1>") {
-		    input "btnSchEna", "button", title: "Schedule $enaDis", width: 3
-       	    paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
-	    }
-	  }
+		if (true) {
+			enaDis = atomicState.paused ? "Disabled" : "Enabled" 
+			section("<h1 style='font-size:1.5em; font-style: italic;'>Enable</h1>") {
+				input "btnSchEna", "button", title: "Schedule $enaDis", width: 3
+				paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
+			}
+		}
     }
 }
 
@@ -469,7 +469,7 @@ Logging output
 */
 
 def logDebug(msg) {
-	if (settings.debugEnable) { log.debug msg }
+	if (settings.debugEnable) { logDebug msg }
 }
 
 def logWarn(msg) { 
@@ -544,22 +544,23 @@ def init() {
 */
 
 def update() {
-	def pauseText = "";
-	if (settings.paused) {
-	    pauseText = ' <span style="color: red;">(Paused)</span>'
-	}
-	if (settings.appLabel) {
-	    app.updateLabel("${settings.appLabel}${pauseText}")
-	} else {
-	    app.updateLabel("Schedule${pauseText}")
-	}
-	logDebug "update() - paused=${paused}"
-	def isActive = !paused 
+//	def pauseText = "";
+//	if (settings.paused) {
+//	    pauseText = ' <span style="color: red;">(Paused)</span>'
+//	}
+//	if (settings.appLabel) {
+//	    app.updateLabel("${settings.appLabel}${pauseText}")
+//	} else {
+//	    app.updateLabel("Schedule${pauseText}")
+//	}
+//	logDebug "update() - paused=${paused}"
+//	def isActive = !paused 
+//	
+//	if (paused) {
+//	    return
+//	}
 
-	if (paused) {
-	    return
-	}
-
+	updateMyLabel()
 	scheduleNext()
 }
 
@@ -619,7 +620,7 @@ def schedHandler(data) {
 		valve2start = valve2start.tail()
 	}
 
-  // some valves need turning on for their duration.
+	// some valves need turning on for their duration, let's start with the first in the list..
 	valves.find { it.id == "$vk" }?.open()
 	logInfo "valve $vk open"
 	state.inCycle = true
@@ -631,7 +632,7 @@ def schedHandler(data) {
 	percentage = month2month ? month2month[currentMonth].toDouble() / 100 : 1  // Lookup the percent in month2month or 1 
 	dura = 60 * duraT * percentage		// duraTime is in minutes, runIn is in seconds
 	duraSeconds = dura.toInteger()
-    logDebug "runIn($duraSeconds, scheduleDurationHandler, [vKey: $vk, dS: $duraSeconds, dV: $valve2start])"
+	logDebug "runIn($duraSeconds, scheduleDurationHandler, [vKey: $vk, dS: $duraSeconds, dV: $valve2start])"
 
  	runIn(duraSeconds, scheduleDurationHandler, [data: [vKey: "$vk", dS: "$duraSeconds", dV: "$valve2start"]]) 
 }
