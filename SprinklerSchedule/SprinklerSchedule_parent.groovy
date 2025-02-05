@@ -72,7 +72,10 @@ preferences {
 
 def mainPage() {
 	dynamicPage(name: "mainPage", title: "", install: true, uninstall: true, submitOnChange: true) {
-	  displayHeader()
+		displayHeader()
+		state.appInstalled = app.getInstallationState() 
+		if (state.appInstalled != 'COMPLETE') return installCheck()
+
         section() {
             app (name: "sprinklerTimetable",
                  appName: "Sprinkler Valve Timetable",
@@ -94,6 +97,7 @@ def mainPage() {
 		  childApps.each {child ->
 		  	child.set2Month(state.month2month) 
 		  	child.set2DayGroup(state.dayGroup) 
+			child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) 
 		  }
 	  }
     }
@@ -109,14 +113,20 @@ Advanced Page handlers
 def advancedPage() {
 	dynamicPage(name: "advancedPage", title: "<i>Advanced Options Page</i>", uninstall: false, install: false)
 	{
-		section(menuHeader("<b>Adjust valve timing by Month</b>"))
+		section(menuHeader("<b>Master: Adjust valve timing by Month</b>"))
 		{
 			paragraph displayMonths()		// display Monthly percentages
 			  editMonths()
 		}
 		section(menuHeader("<b>Master: Select Days into Groups</b>"))
 		{
+			paragraph "<i>Groups defined here will appear as un-editable groups in every Timetable. </i>"
 			paragraph displayDayGroups()		// display day-of-week groups
+		}
+		section(menuHeader("<b>Master: Select Temperature Device</b>"))
+		{
+			paragraph "<i>Choose a temperature device and set the maximum value. Timetables can be conditional on the temperature exceeding the maximum.</i>"
+			  selectTemperatureDevice()		// are there days that are very hot 
 		}
 	}
 }
@@ -155,7 +165,7 @@ String displayMonths() {	// display Monthly percentages
 
 
 String displayDayGroups() {	// display day-of-week groups
-	if(state.dayGroup == null) state.dayGroup = ['1': ['1':true, '2':true, '3':true, '4':true, '5':true, '6':true, '7':true] ] // initial row
+	if(state.dayGroup == null) state.dayGroup = ['1': ['1':true, '2':true, '3':true, '4':true, '5':true, '6':true, '7':true, "s": "P", "name": ""] ] // initial row
 	if(state.dayGroupBtn) {
 		String dgK = state.dayGroupBtn.substring(0, 1); // dayGroupBtn Key
 		String dgI = state.dayGroupBtn.substring(1);   // dayGroupBtn value (mon-sun)
@@ -207,6 +217,28 @@ String displayDayGroups() {	// display day-of-week groups
 	str
 }
 
+def selectTemperatureDevice() {
+
+	paragraph "\n<b>Temperature Device Select</b>"
+			input "outdoorTempDevice",
+      	        "capability.temperatureMeasurement",
+      	        title: "Select which device?",
+      	        multiple: false,
+      	        required: false,
+      	        submitOnChange: true
+
+	paragraph "\n<b>Maximum Temperature </b>"
+			input "maxOutdoorTemp",
+      	        "number",
+      	        title: "<i>Enter the Maximum temperature beyond which conditional Timetables will run.</i>",
+      	        defaultValue: maxOutdoorTemp,
+      	        multiple: false,
+      	        required: false,
+      	        submitOnChange: true
+
+}
+
+
 /*
 -----------------------------------------------------------------------------
 Display level handlers
@@ -227,7 +259,7 @@ def editMonths() {
 
 
 def addDayGroup(evt = null) {
-	dayGroupTemplate = ['1':false, '2':false, '3':false, '4':false, '5':false, '6':false, '7':false] // new rows are all empty
+	dayGroupTemplate = ['1':false, '2':false, '3':false, '4':false, '5':false, '6':false, '7':false, "s": "P", "name": ""] // new rows are all empty
 
 	dayGroupSize = state.dayGroup.keySet().size()
 	s = dayGroupSize as int
@@ -237,33 +269,14 @@ def addDayGroup(evt = null) {
 }
 
 
-def remDayGroup(evt = null) {
-	dayGroupSize = state.dayGroup.keySet().size()
-	dGTemp = [:]
-	dGSetTemp =[:]
-	logDebug "remove another dayGroup map: $dayGroupSize, $evt"
-	if (dayGroupSize >= 2) {
-		state.dayGroup.each {
-		    if (it.key < evt) {
-		        dGTemp[it.key]=it.value
-		    }
-		    else if (it.key > evt) {
-		        k = it.key as Integer
-		        k--
-		        dGTemp[k]=it.value
-		    }
-		}
-		state.dayGroupSettings.each {
-		    if (it.key < evt) {
-		        dGSetTemp[it.key]=it.value
-		    }
-		    else if (it.key > evt) {
-		        k = it.key as Integer
-		        k--
-		        dGSetTemp[k]=it.value
-		    }
-		}
-	state.dayGroup = dGTemp
+def remDayGroup(evt = null) {  	// remove a Local dayGroup & dayGroupSettings
+	dayGroupSize = (state.dayGroup ?: [:]).keySet().size()
+	if (dayGroupSize >= 1) {
+		// Determine the key to delete
+		keyToDelete = state.dayGroup.isEmpty() ? evt : (evt.toInteger() - (state.dayGroupMaster ?: [:]).size()).toString()
+		
+		logDebug "remove another dayGroup map: $dayGroupSize, $keyToDelete, evt:$evt"
+		if (state.dayGroup.containsKey(keyToDelete)) { state.dayGroup.remove(keyToDelete) } 
 	}
 }
 
@@ -285,6 +298,7 @@ def updated() {
 	childApps.each {child ->
 		child.set2Month(state.month2month) 
 		child.set2DayGroup(state.dayGroup) 
+		child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) 
 	}
 }
 
@@ -295,6 +309,27 @@ def initialize() {
 	logDebug "there are ${childApps.size()} child smartapps"
 	childApps.each {child ->
 		log.debug "child app: ${child.label}"
+	}
+}
+
+
+// called by each child when it wants an update of these values.
+def componentInitialize(cd) { 
+	if (!advancedOption) return
+
+	cd.set2Month(state.month2month) 
+	cd.set2DayGroup(state.dayGroup) 
+	cd.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) 
+}
+
+
+def installCheck(){         
+	state.appInstalled = app.getInstallationState() 
+	if(state.appInstalled != 'COMPLETE'){
+		section{paragraph "Please hit 'Done' to install '${app.label}'"}
+	}
+	else{
+		if (logEnable) log.debug "$app.name is Installed Correctly"
 	}
 }
 
