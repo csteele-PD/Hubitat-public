@@ -182,7 +182,7 @@ String displayDayGroups() {	// display day-of-week groups - Section I
 		state.remove("dayGroupBtn") // only once 
 		logDebug "displayDayGroups Item: $dgK.$dgI"
 	}
-	if(state.overTempBtn) {		// toggle the daily checkmarks 
+	if(state.overTempBtn) {		// toggle the overTemp checkmarks 
 		dgK = state.overTempBtn[0].toInteger() - incM // overTempBtn Key
        	if (state.dayGroup.containsKey(dgK.toString())) { state.dayGroup[dgK.toString()].ot = !state.dayGroup[dgK.toString()].ot } // Toggle state
 		state.remove("overTempBtn") // only once 
@@ -254,11 +254,21 @@ String displayDayGroups() {	// display day-of-week groups - Section I
 
 
 String displayTable() { 	// display groups for scheduling - Section II
-	if (state.reset) {
-        log.debug "this is reset $state.reset, $state.dayGroupMerge[state.reset].startTime"
-		state.dayGroupMerge[state.reset].startTime = 0
-		state.dayGroupMerge[state.reset].duraTime = 0
-		state.remove("reset")
+	if (state.eraseTime) {
+		def eraseTime = state.eraseTime as Integer
+		def masterSize = state.dayGroupMaster.size()
+		def offset = (masterSize >= eraseTime) 
+		def nIndex = (offset) ? eraseTime.toString() : (eraseTime - masterSize).toString()
+			if (offset) {
+			    if (state.dayGroupMaster.containsKey(nIndex)) { state.dayGroupMaster[nIndex].startTime = 0 }
+			    if (state.dayGroupMaster.containsKey(nIndex)) { state.dayGroupMaster[nIndex].duraTime = 0 }
+			} else {
+			    if (state.dayGroup.containsKey(nIndex)) { state.dayGroup[nIndex].startTime = 0 }
+			    if (state.dayGroup.containsKey(nIndex)) { state.dayGroup[nIndex].duraTime = 0 }
+			}
+		state.remove("eraseTime")
+		app.removeSetting("eraseTime")
+		paragraph "<script>{changeSubmit(this)}</script>"
 	}
 
 
@@ -365,7 +375,7 @@ def displayDuration() {
 }
 
 
-def selectDayGroup() {
+def selectDayGroup() { // map valve to dayGroup
  	if(state.dayGrpBtn) {
 		List vars = state.dayGroupMerge.keySet().collect() 
 
@@ -396,12 +406,19 @@ def addDayGroup(evt = null) {
 
 def remDayGroup(evt = null) {  	// remove a Local dayGroup & dayGroupSettings
 	dayGroupSize = (state.dayGroupMerge ?: [:]).keySet().size()
-	if (dayGroupSize >= 1) {
+	if (dayGroupSize > 1) {
 		// Determine the key to delete
-		keyToDelete = state.dayGroupMerge.isEmpty() ? evt : (evt.toInteger() - (state.dayGroupMaster ?: [:]).size()).toString()
-		
+		keyToDelete = (evt.toInteger() - (state.dayGroupMaster ?: [:]).size()).toString()		
 		logDebug "remove another dayGroup map: $dayGroupSize, $keyToDelete, evt:$evt"
 		if (state.dayGroup.containsKey(keyToDelete)) { state.dayGroup.remove(keyToDelete) } 
+		// Re-map keys to be sequential
+		def dayGrpReOrder = [:]
+		def counter = 1
+		state.dayGroup.sort { it.key.toInteger() }.each { k, v ->
+		    dayGrpReOrder["${counter}"] = v
+		    counter++
+		}
+		state.dayGroup = dayGrpReOrder
 	}
 }
 
@@ -417,7 +434,6 @@ def masterGroupMerge(masterDayGroupIn=[:]) {
 		masterDayGroupIn.each { k, v -> 	// first merge the sent map because the days-of-week are fixed. 
 			if (dayGroupMaster.containsKey(k)) {  // Create a deep copy safely
 				dayGroupMerge[k] = v.clone()		
-				// Copy startTime, Duration, etc. from dayGroupMaster into dayGroupMerge element by element
 				def masterEntry = dayGroupMaster[k] ?: [:]  // Default to empty map if null
 				dayGroupMerge[k].startTime = masterEntry?.startTime
 				dayGroupMerge[k].duraTime = masterEntry?.duraTime  // Ensure correct property name
@@ -600,7 +616,7 @@ def init(why) {
 
 def reschedule() {		// midnight run to setup first schedule of the day.
 	unschedule(reschedule)
-	schedule('7 7 0 ? * *', reschedule)  // reschedule the midnight run to schedule that day's work.
+	schedule('7 7 0 ? * *', reschedule) // reschedule the midnight run to schedule that day's work.
 	state.overTempToday = false // once a day, midnight, reset the over temp indicator
 	runIn(15, scheduleNext)
 }
@@ -613,6 +629,9 @@ def scheduleNext() {
 		return
 	}
 	
+	unschedule(reschedule)
+	schedule('7 7 0 ? * *', reschedule) // reschedule the midnight run to schedule that day's work.
+
 	logInfo "Checking $app.label Schedule."
 	Calendar calendar = Calendar.getInstance();
 	def cronDay = calendar.get(Calendar.DAY_OF_WEEK);
@@ -623,8 +642,6 @@ def scheduleNext() {
 		return
 	}
 
-	unschedule(reschedule)
-	schedule('7 7 0 ? * *', reschedule)  // reschedule the midnight run to schedule that day's work.
 	Date date = new Date()
 	String akaNow = date.format("HH:mm")
 	hasSched = false
