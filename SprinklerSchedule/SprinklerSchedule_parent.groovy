@@ -165,7 +165,7 @@ String displayMonths() {	// display Monthly percentages
 
 
 String displayDayGroups() {	// display day-of-week groups
-	if(state.dayGroup == null) state.dayGroup = ['1': ['1':true, '2':true, '3':true, '4':true, '5':true, '6':true, '7':true, "s": "P", "name": ""] ] // initial row
+	if(state.dayGroup == null) state.dayGroup = ['1': ['1':true, '2':true, '3':true, '4':true, '5':true, '6':true, '7':true, "s": "P", "name": "", "ot": false, "ra": false, "duraTime": null, "startTime": null ] ] // initial row
 	if(state.dayGroupBtn) {
 		String dgK = state.dayGroupBtn.substring(0, 1); // dayGroupBtn Key
 		String dgI = state.dayGroupBtn.substring(1);   // dayGroupBtn value (mon-sun)
@@ -258,14 +258,26 @@ def editMonths() {
 }
 
 
-def addDayGroup(evt = null) {
-	dayGroupTemplate = ['1':false, '2':false, '3':false, '4':false, '5':false, '6':false, '7':false, "s": "P", "name": ""] // new rows are all empty
+def XXaddDayGroup(evt = null) {
+	dayGroupTemplate = ['1':false, '2':false, '3':false, '4':false, '5':false, '6':false, '7':false, "s": "P", "name": "", "ot": false, "ra": false, "duraTime": null, "startTime": null ] // new rows are all empty
 
 	dayGroupSize = state.dayGroup.keySet().size()
 	s = dayGroupSize as int
 	s++
 	logDebug "adding another dayGroup map: $s"
 	state.dayGroup += ["$s":dayGroupTemplate] 
+}
+def addDayGroup(evt = null) {
+    def dayGroupTemplate = [
+        '1': false, '2': false, '3': false, '4': false, '5': false, '6': false, '7': false, 
+        "s": "P", "name": "", "ot": false, "ra": false, "duraTime": null, "startTime": null
+    ] // new rows are all empty
+
+    def dayGroupSize = state.dayGroup.size() // More efficient
+    def newIndex = (dayGroupSize + 1).toString() // Ensures key consistency
+
+    logDebug "Adding another dayGroup map: $newIndex"
+    state.dayGroup[newIndex] = dayGroupTemplate.clone() // Clone to avoid reference issues
 }
 
 
