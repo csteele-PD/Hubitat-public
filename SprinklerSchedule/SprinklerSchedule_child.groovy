@@ -460,6 +460,13 @@ def masterGroupMerge(masterDayGroupIn=[:]) {
 	state.dayGroupMerge = dayGroupMerge
 }
 
+String buttonLink(String btnName, String linkText, color = "#1A77C9", font = "15px") {
+	"<div class='form-group'><input type='hidden' name='${btnName}.type' value='button'></div><div><div class='submitOnChange' onclick='buttonClick(this)' style='color:$color;cursor:pointer;font-size:$font'>$linkText</div></div><input type='hidden' name='settings[$btnName]' value=''>"
+}
+String noButtonLink(String btnName, String linkText, color = "#1A77C9", font = "15px") {
+	"<div class='form-group'></div><div><div style='color:$color;font-size:$font'>$linkText</div></div>"
+}
+
 void appButtonHandler(btn) {
 	// only one button can be pressed, remove their states, since "btn" contains the only valid one.
 	state.remove("duraTimeBtn") 
