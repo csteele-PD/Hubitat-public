@@ -12,7 +12,7 @@
       "required": true,
       "oauth": false, 
       "primary": true,
-      "version": "1.0.2"
+      "version": "1.0.1"
     },
     {
       "name": "Sprinkler Valve Timetable",
