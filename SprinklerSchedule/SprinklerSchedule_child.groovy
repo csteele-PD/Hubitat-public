@@ -425,11 +425,12 @@ def remDayGroup(evt = null) {  	// remove a Local dayGroup & dayGroupSettings
 
 def masterGroupMerge(masterDayGroupIn=[:]) {
 	// make malleable copies of each component
-	def dayGroupMaster = state.dayGroupMaster ?: [:]
+	def masterSize = masterDayGroupIn.size() ?: [:]
+	def dayGroupMaster = masterSize ? masterDayGroupIn : state.dayGroupMaster
+	masterSize = dayGroupMaster.size() ?: [:]
+	state.dayGroupMaster = dayGroupMaster
 	def dayGroup = state.dayGroup ?: [:]
 	def dayGroupMerge = [:]
-	def masterSize = dayGroupMaster.size()
-	
 	if (masterDayGroupIn) {  // if a new copy of dayGroupMaster was passed from Parent, need to use it as a Template to retain selected values.
 		masterDayGroupIn.each { k, v -> 	// first merge the sent map because the days-of-week are fixed. 
 			if (dayGroupMaster.containsKey(k)) {  // Create a deep copy safely
@@ -454,17 +455,9 @@ def masterGroupMerge(masterDayGroupIn=[:]) {
 		def newKey = (k.toInteger() + masterSize).toString()
 		dayGroupMerge[newKey] = v.clone()
 	}
-	
+
 	// Done, move the malleable into state.
 	state.dayGroupMerge = dayGroupMerge
-}
-
-
-String buttonLink(String btnName, String linkText, color = "#1A77C9", font = "15px") {
-	"<div class='form-group'><input type='hidden' name='${btnName}.type' value='button'></div><div><div class='submitOnChange' onclick='buttonClick(this)' style='color:$color;cursor:pointer;font-size:$font'>$linkText</div></div><input type='hidden' name='settings[$btnName]' value=''>"
-}
-String noButtonLink(String btnName, String linkText, color = "#1A77C9", font = "15px") {
-	"<div class='form-group'></div><div><div style='color:$color;font-size:$font'>$linkText</div></div>"
 }
 
 void appButtonHandler(btn) {
