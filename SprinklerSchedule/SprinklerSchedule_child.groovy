@@ -121,7 +121,6 @@ def main(){
 				paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
 			}
 		}
-	
 		
 		if (valves) {
 			section("<h1 style='font-size:1.5em; font-style: italic;'>Schedule</h1>") {
@@ -360,7 +359,7 @@ def displayDuration() {
 		def masterSize = state.dayGroupMaster.size()
 		def offset = (masterSize >= duraTimeBtn) 
 		def nIndex = (offset) ? duraTimeBtn.toString() : (duraTimeBtn - masterSize).toString()
-		input "DuraTime", "decimal", title: "Sprinkler Duration", submitOnChange: true, width: 4, range: "1..60", defaultValue: state.duraTimeBtn, newLineAfter: true
+		input "DuraTime", "decimal", title: "Sprinkler Duration", submitOnChange: true, width: 4, range: "0..60", defaultValue: state.duraTimeBtn, newLineAfter: true
 		if(DuraTime) {
 			if (offset) {
 			    if (state.dayGroupMaster.containsKey(nIndex)) { state.dayGroupMaster[nIndex].duraTime = DuraTime }
@@ -423,42 +422,36 @@ def remDayGroup(evt = null) {  	// remove a Local dayGroup & dayGroupSettings
 }
 
 
-def masterGroupMerge(masterDayGroupIn=[:]) {
-	// make malleable copies of each component
-	def masterSize = masterDayGroupIn.size() ?: [:]
-	def dayGroupMaster = masterSize ? masterDayGroupIn : state.dayGroupMaster
-	masterSize = dayGroupMaster.size() ?: [:]
-	state.dayGroupMaster = dayGroupMaster
-	def dayGroup = state.dayGroup ?: [:]
-	def dayGroupMerge = [:]
-	if (masterDayGroupIn) {  // if a new copy of dayGroupMaster was passed from Parent, need to use it as a Template to retain selected values.
-		masterDayGroupIn.each { k, v -> 	// first merge the sent map because the days-of-week are fixed. 
-			if (dayGroupMaster.containsKey(k)) {  // Create a deep copy safely
-				dayGroupMerge[k] = v.clone()		
-				def masterEntry = dayGroupMaster[k] ?: [:]  // Default to empty map if null
-				dayGroupMerge[k].startTime = masterEntry?.startTime
-				dayGroupMerge[k].duraTime = masterEntry?.duraTime  // Ensure correct property name
-				dayGroupMerge[k].name = masterEntry?.name
-				dayGroupMerge[k].ot = masterEntry?.ot
-				dayGroupMerge[k].ra = masterEntry?.ra
-			}			
-		} 
+def masterGroupMerge(masterDayGroupIn = [:]) {
+	def dayGroupMaster = [:]
+	state.dayGroupMaster.each { k, v ->
+ 		dayGroupMaster[k] = v.clone()
 	}
-	else { 	// Copy dayGroupMaster into dayGroupMerge (no new masterDayGroupIn)
-		dayGroupMaster.each { k, v ->
-			dayGroupMerge[k] = v.clone()
+ 	def dayGroupMerge = masterDayGroupIn ? masterDayGroupIn.collectEntries { k, v -> [k, v.clone()] }  : dayGroupMaster.collectEntries { k, v -> [k, v.clone()] }  ?: [:]
+
+	if (masterDayGroupIn) {
+		dayGroupMerge.each { k, v -> 
+			if (state.dayGroupMaster.containsKey(k)) {
+      	          def masterEntry = state.dayGroupMaster[k]
+      	          v.startTime = masterEntry?.startTime ?: null
+      	          v.duraTime = masterEntry?.duraTime ?: null
+      	          v.name = masterEntry?.name ?: ""
+      	          v.ot = masterEntry?.ot ?: false
+      	          v.ra = masterEntry?.ra ?: false
+      	      }
 		}
+        dayGroupMerge.each { k, v ->
+ 		    state.dayGroupMaster[k] = v.clone()
+        }
 	}
 
-	// Add dayGroup with incremented keys
-	dayGroup.each { k, v ->
-		def newKey = (k.toInteger() + masterSize).toString()
-		dayGroupMerge[newKey] = v.clone()
+	state.dayGroup.each { k, v -> // merge dayGroup into 
+		dayGroupMerge[(k.toInteger() + dayGroupMerge.size()).toString()] = v.clone()
 	}
 
-	// Done, move the malleable into state.
-	state.dayGroupMerge = dayGroupMerge
+	state.dayGroupMerge = dayGroupMerge.collectEntries { k, v -> [k, v.clone()] }
 }
+
 
 String buttonLink(String btnName, String linkText, color = "#1A77C9", font = "15px") {
 	"<div class='form-group'><input type='hidden' name='${btnName}.type' value='button'></div><div><div class='submitOnChange' onclick='buttonClick(this)' style='color:$color;cursor:pointer;font-size:$font'>$linkText</div></div><input type='hidden' name='settings[$btnName]' value=''>"
@@ -566,6 +559,7 @@ def setOutdoorTemp(aTempDevice, dTemp) {
 	state.maxOutdoorTemp = dTemp
 	def tempNow = aTempDevice.currentValue("temperature")
 	state.overTempToday = ( tempNow > state.maxOutdoorTemp.toInteger() ) ? true : false
+	logInfo "OutdoorTemp update from Parent, tempNow: $tempNow." 
 	unsubscribe(recvOutdoorTempHandler)
 	subscribe(aTempDevice, "temperature", recvOutdoorTempHandler)
 }
@@ -673,12 +667,19 @@ def schedHandler(data) {
 	unschedule(schedHandler)	// don't repeat this day after day.
 	logInfo "Running $app.name Schedule."
 	cd = data["dKey"] as String
+	duraT = state.dayGroupMerge."$cd".duraTime
 
 	// if the schedule to be run is an 'ot' (overTemp) and today doesn't have an overTemp, then skip
 	if(state.dayGroupMerge[cd].ot && !state.overTempToday) {
 		logInfo "No Over Temperature today, skipping."
 		runIn(60, scheduleNext)			// find and then schedule the next startTime for today
 		return
+	}
+	
+	if (duraT == 0) {
+		logInfo "Duration of 0, skipping."
+		runIn(60, scheduleNext)			// find and then schedule the next startTime for today
+		return	
 	}
 
 	valve2start = state.valves.findAll { it.value.dayGroup.contains(cd) }.keySet()
