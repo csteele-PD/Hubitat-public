@@ -43,13 +43,14 @@ This code is licensed as follows:
  *
  *
  *
- * csteele: v1.0.1	? Send month2month and dayGroup to child Apps
+ * csteele: v1.0.2	? 
+ * csteele: v1.0.1	Send month2month and dayGroup to child Apps
  * csteele: v1.0.0	Inspired by Matt Hammond's Lighting Schedules
  *                	 Converted to capability.valve from switch 
  *
  */
  
-	public static String version()      {  return "v1.0.1"  }
+	public static String version()      {  return "v1.0.2"  }
 
 definition(
 	name: "Sprinkler Schedule Manager",
