@@ -4,14 +4,19 @@ Hubitat Elevation Application
 Sprinkler Scheduler (parent application)
 
     Inspiration: Lighting Schedules https://github.com/matt-hammond-001/hubitat-code
+    Inspiration: github example from Hubitat of lightsUsage.groovy
     This fork: Sprinkler Schedules https://github.com/csteele-PD/Hubitat-public/tree/master/SprinklerSchedule
 
 -----------------------------------------------------------------------------
 This code is licensed as follows:
 
+	Portions:
+	 	Copyright (c) 2022 Hubitat, Inc.  All Rights Reserved Bruce Ravenel 
+
 	BSD 3-Clause License
 	
 	Copyright (c) 2023, C Steele
+	Copyright (c) 2022 Hubitat, Inc.  All Rights Reserved (Bruce Ravenel) 
 	Copyright (c) 2020, Matt Hammond
 	All rights reserved.
 	
