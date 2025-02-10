@@ -4,10 +4,14 @@ Hubitat Elevation Application
 Sprinkler Schedule (child application)
 
     Inspiration: Lighting Schedules https://github.com/matt-hammond-001/hubitat-code
+    Inspiration: github example from Hubitat of lightsUsage.groovy
     This fork: Sprinkler Schedules https://github.com/csteele-PD/Hubitat-public/tree/master/SprinklerSchedule
 
 -----------------------------------------------------------------------------
 This code is licensed as follows:
+
+	Portions:
+	 	Copyright (c) 2022 Hubitat, Inc.  All Rights Reserved Bruce Ravenel 
 
 	BSD 3-Clause License
 	
@@ -201,7 +205,7 @@ String displayDayGroups() {	// display day-of-week groups - Section I
 		"<th>Fri</th>" +
 		"<th>Sat</th>" +
 		"<th>Sun</th>" +
-		"<th colspan=2>OverTemp</th>" +
+		"<th colspan=2 style='color:#db7321;'>OverTemp</th>" +
 		"</tr></thead>"
 
 	str += "<tr style='color:black'border = 1>" 
@@ -239,8 +243,8 @@ String displayDayGroups() {	// display day-of-week groups - Section I
 	        }
 		  String remDayGroupBtn = buttonLink("rem$rowCount", "<i style=\"font-size:1.125rem\" class=\"material-icons he-bin\"></i>", "#1A77C9", "")
 		  str += "<th>$remDayGroupBtn</th>"
-		  String otBoxN = buttonLink("o$rowCount", O, "#1A77C9", "")
-		  String otBoxY = buttonLink("o$rowCount", X,   "#1A77C9", "")
+		  String otBoxN = buttonLink("o$rowCount", O, "#db7321", "")
+		  String otBoxY = buttonLink("o$rowCount", X,   "#db7321", "")
 	        str += (dg."ot") ? "<th>$otBoxY</th>" : "<th>$otBoxN</th>" 
 		  strRows = "</tr><tr>" 
 		  rowCount++
@@ -422,13 +426,15 @@ def remDayGroup(evt = null) {  	// remove a Local dayGroup & dayGroupSettings
 }
 
 
-def masterGroupMerge(masterDayGroupIn = [:]) {
+def masterGroupMerge(masterDayGroupIn = [:]) { // lots of deep copies of hashMaps
+	// three part merge. Part 1: Decide which incoming "Master" is to be used and clone the days-of-week fields.
 	def dayGroupMaster = [:]
 	state.dayGroupMaster.each { k, v ->
- 		dayGroupMaster[k] = v.clone()
+ 		dayGroupMaster[k] = v.clone() // deep copy
 	}
- 	def dayGroupMerge = masterDayGroupIn ? masterDayGroupIn.collectEntries { k, v -> [k, v.clone()] }  : dayGroupMaster.collectEntries { k, v -> [k, v.clone()] }  ?: [:]
+ 	def dayGroupMerge = masterDayGroupIn ? masterDayGroupIn.collectEntries { k, v -> [k, v.clone()] }  : dayGroupMaster.collectEntries { k, v -> [k, v.clone()] }  ?: [:] // deep copy
 
+	//  Part 2: overwrite setTime, DuraTime, name, ot and ra values from the child for the Master records. 
 	if (masterDayGroupIn) {
 		dayGroupMerge.each { k, v -> 
 			if (state.dayGroupMaster.containsKey(k)) {
@@ -440,16 +446,18 @@ def masterGroupMerge(masterDayGroupIn = [:]) {
       	          v.ra = masterEntry?.ra ?: false
       	      }
 		}
-        dayGroupMerge.each { k, v ->
- 		    state.dayGroupMaster[k] = v.clone()
-        }
+		dayGroupMerge.each { k, v ->
+			state.dayGroupMaster[k] = v.clone() // deep copy this new master for next pass.
+		}
 	}
 
+	//  Part 3: independent of masterDayGroupIn vs state.dayGroupMaster, all the child dayGroup rows are cloned & keys renumbered.
 	state.dayGroup.each { k, v -> // merge dayGroup into 
-		dayGroupMerge[(k.toInteger() + dayGroupMerge.size()).toString()] = v.clone()
+		dayGroupMerge[(k.toInteger() + dayGroupMerge.size()).toString()] = v.clone() // deep copy
 	}
 
-	state.dayGroupMerge = dayGroupMerge.collectEntries { k, v -> [k, v.clone()] }
+	// then clone it for the next pass.
+	state.dayGroupMerge = dayGroupMerge.collectEntries { k, v -> [k, v.clone()] } // deep copy
 }
 
 
