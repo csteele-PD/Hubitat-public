@@ -173,7 +173,7 @@ String displayMonths() {	// display Monthly percentages
 String displayDayGroups() {	// display day-of-week groups
 	if(state.dayGroup == null) state.dayGroup = ['1': ['1':true, '2':true, '3':true, '4':true, '5':true, '6':true, '7':true, "s": "P", "name": "", "ot": false, "ra": false, "duraTime": null, "startTime": null ] ] // initial row
 	if(state.dayGroupBtn) {
-		String dgK = state.dayGroupBtn.substring(0, 1); // dayGroupBtn Key
+		String dgK = state.dayGroupBtn.substring(0, 1); // dayGroupBtn Key (row)
 		String dgI = state.dayGroupBtn.substring(1);   // dayGroupBtn value (mon-sun)
 
 		state.dayGroup."$dgK"."$dgI" = state.dayGroup."$dgK"."$dgI" ? false : true // toggle the state.
@@ -264,15 +264,6 @@ def editMonths() {
 }
 
 
-def XXaddDayGroup(evt = null) {
-	dayGroupTemplate = ['1':false, '2':false, '3':false, '4':false, '5':false, '6':false, '7':false, "s": "P", "name": "", "ot": false, "ra": false, "duraTime": null, "startTime": null ] // new rows are all empty
-
-	dayGroupSize = state.dayGroup.keySet().size()
-	s = dayGroupSize as int
-	s++
-	logDebug "adding another dayGroup map: $s"
-	state.dayGroup += ["$s":dayGroupTemplate] 
-}
 def addDayGroup(evt = null) {
     def dayGroupTemplate = [
         '1': false, '2': false, '3': false, '4': false, '5': false, '6': false, '7': false, 
@@ -306,13 +297,13 @@ Standard handlers, and mode-change handler
 */
 
 def installed() {
-	logDebug "Installed with settings: ${settings}"
+	logInfo "Installed with settings."//": ${settings}"
 	initialize()
 }
 
 
 def updated() {
-	logDebug "Updated with settings: ${settings}"
+	logInfo "Updated with settings."//": ${settings}"
 	childApps.each {child ->
 		child.set2Month(state.month2month) 
 		child.set2DayGroup(state.dayGroup) 
@@ -324,9 +315,9 @@ def updated() {
 def initialize() {
 	// nothing needed here, since the child apps will handle preferences/subscriptions
 	// this just logs some messages for demo/information purposes
-	logDebug "there are ${childApps.size()} child smartapps"
+	logInfo "there are ${childApps.size()} child smartapps"
 	childApps.each {child ->
-		log.debug "child app: ${child.label}"
+		logInfo "child app: ${child.label}"
 	}
 }
 
@@ -347,13 +338,17 @@ def installCheck(){
 		section{paragraph "Please hit 'Done' to install '${app.label}'"}
 	}
 	else{
-		if (logEnable) log.debug "$app.name is Installed Correctly"
+		logInfo "$app.name is Installed Correctly"
 	}
 }
 
 
 def logDebug(msg) { // allows either log.debug or logDebug like the Child code.
 	log.debug msg
+}
+
+def logInfo(msg) { // allows either log.info or logInfo like the Child code.
+	log.info msg
 }
 
 /*
@@ -384,7 +379,7 @@ String buttonLink(String btnName, String linkText, color = "#1A77C9", font = "15
 void appButtonHandler(btn) {
 	state.remove("dispMonthBtn")
 	state.remove("dayGroupBtn")
-	app.removeSetting("monthPercentage")
+	app.removeSetting("monthPercentage") 
 	if ( btn.startsWith("m"))  state.dispMonthBtn = btn.minus("m")
 	else if ( btn == "addDGBtn")            addDayGroup()
 	else if ( btn.startsWith("rem")      )  remDayGroup(btn.minus("rem")) 
