@@ -274,7 +274,6 @@ String displayTable() { 	// display groups for scheduling - Section II
 		paragraph "<script>{changeSubmit(this)}</script>"
 	}
 
-
 	String str = "<script src='https://code.iconify.design/iconify-icon/1.0.0/iconify-icon.min.js'></script>"
 	str += "<style>.mdl-data-table tbody tr:hover{background-color:inherit} .tstat-col td,.tstat-col th { padding:8px 8px;text-align:center;font-size:12px} .tstat-col td {font-size:15px }" +
 		"</style><div style='overflow-x:auto'><table class='mdl-data-table tstat-col' style=';border:2px solid black'>" +
@@ -494,6 +493,13 @@ void appButtonHandler(btn) {
 
 
 /*
+-------------------------------------------------------------------------------------------
+
+---  UI code above here, Generic App code below.  Background Valve code further below.  ---
+
+-------------------------------------------------------------------------------------------
+*/
+/*
 -----------------------------------------------------------------------------
 Logging output
 -----------------------------------------------------------------------------
@@ -610,9 +616,15 @@ def init(why) {
 
 
 /*
----------------    UI code above here, Background Valve on/off code below.    --------------------------------------------------------------
+-------------------------------------------------------------------------------------------
 
-   Whenever there is a change/update
+---  Generic App code above here, Background Valve on/off code below.  --------------------
+
+-------------------------------------------------------------------------------------------
+*/
+/*
+-----------------------------------------------------------------------------
+   Whenever there is a Timetable change/update
 -----------------------------------------------------------------------------
 */
 
@@ -646,10 +658,10 @@ def scheduleNext() {
 
 	Date date = new Date()
 	String akaNow = date.format("HH:mm")
+		
 	hasSched = false
-
 	for (timN in timings) {
-	    sk = timN.key
+	    sk = timN.key			// index into dayGroupMerge for Duration
 	    (sth, stm) = timN.startTime.split(':')
 	    if (akaNow.replace(':', '') > timN.startTime.replace(':', '')) continue
 	    hasSched = true
@@ -661,13 +673,14 @@ def scheduleNext() {
 
 
 def logsOff() {
-	log.warn "debug logging Disabled..."
+	logWarn "debug logging Disabled..."
 	app?.updateSetting("debugEnable",[value:"false",type:"bool"])
 }
 
+
 /*
 -----------------------------------------------------------------------------
-Helper/Handler functions
+   Schedule Helper/Handler functions
 -----------------------------------------------------------------------------
 */
 
@@ -707,9 +720,9 @@ def schedHandler(data) {
     
 	duraT = state.dayGroupMerge."$cd".duraTime
 	currentMonth = new Date().format("M") 	// Get the current month as a number (1-12)
-	percentage = month2month ? month2month[currentMonth].toDouble() / 100 : 1  // Lookup the percent in month2month or 1 
-	dura = 60 * duraT * percentage		// duraTime is in minutes, runIn is in seconds
-	duraSeconds = dura.toInteger()
+	currentMonthPercentage = state.month2month ? state.month2month[currentMonth].toDouble() / 100 : 1  // Lookup the percent in month2month or 1 
+	dura = 60 * duraT * currentMonthPercentage		// duraTime is in minutes, runIn is in seconds
+	duraSeconds = Math.max(dura.toInteger(), 20) // Ensure minimum valve timing of 20 seconds
 	logDebug "runIn($duraSeconds, scheduleDurationHandler, [vKey: $vk, dS: $duraSeconds, dV: $valve2start])"
 
  	runIn(duraSeconds, scheduleDurationHandler, [data: [vKey: "$vk", dS: "$duraSeconds", dV: "$valve2start"]]) 
@@ -823,12 +836,14 @@ def sectFormat(type, myText=""){
 	if(type == "title") return "<h2 style='color:#1A77C9;font-weight: bold'>${myText}</h2>"
 }
 
+
 def displayHeader() {
 	section (sectFormat("title", "Sprinkler Schedule")) {
 		paragraph "<div style='color:#1A77C9;text-align:right;font-weight:small;font-size:9px;'>Developed by: C Steele, Matt Hammond<br/>Current Version: ${version()} -  ${thisCopyright}</div>"
 		paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
 	}
 }
+
 
 String menuHeader(titleText){"<div style=\"width:102%;background-color:#696969;color:white;padding:4px;font-weight: bold;box-shadow: 1px 2px 2px #bababa;margin-left: -10px\">${titleText}</div>"}
 def getThisCopyright(){"&copy; 2023 C Steele"}
