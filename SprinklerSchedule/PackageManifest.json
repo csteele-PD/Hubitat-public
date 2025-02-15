@@ -27,5 +27,14 @@
       "primary": false,
       "version": "1.0.2"
     }
+  ],
+  "drivers":[
+    {
+      "name": "hybrid RainCheck",
+      "id": "hybridRainCheck",
+      "namespace": "csteele",
+      "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/refs/heads/master/SprinklerSchedule/hybridRainCheck.groovy",
+      "required": false
+    }
   ]
 }
