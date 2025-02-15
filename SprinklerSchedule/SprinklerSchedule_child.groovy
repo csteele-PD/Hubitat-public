@@ -47,7 +47,7 @@ This code is licensed as follows:
  *
  *
  *
- * csteele: v1.0.2	?
+ * csteele: v1.0.2	Add Rain Detection to be used as a Conditional
  * csteele: v1.0.1	Added month2month and dayGroupMaster from Parent
  * csteele: v1.0.0	Inspired by Matt Hammond's Lighting Schedule (child)
  *                	 Converted to capability.valve from switch 
@@ -112,7 +112,7 @@ def main(){
       	}
 	
       	// provide some feedback on which valves are On
-		String str = valves?.collect { dev -> "${dev.label} is ${dev.currentValue('valve', true) == 'open' ? 'On' : 'Off'}"}?.join(', ') ?: ""
+		String str = valves?.collect { dev -> "${dev.label ?: dev.name} is ${dev.currentValue('valve', true) == 'open' ? 'On' : 'Off'}"}?.join(', ') ?: ""
 		if (state.overTempToday) { str += "<br> Sometime today, the outside temperature exceeded the limit you set of $state.maxOutdoorTemp." }
 
       	section(menuHeader("Valve Status")) {
@@ -122,6 +122,7 @@ def main(){
 		if (state.month2month) {
 			section(menuHeader("Parent - Advanced Options")) {
 			  	paragraph "Adjust valve timing by Month is active"
+			  	paragraph "Rain hold is $state.rainHold"
 				paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
 			}
 		}
@@ -141,20 +142,24 @@ def main(){
 				paragraph displayGrpSched()		// display mapping of Valve to DayGroup - Section III
 				  selectDayGroup()
 			
+				input "rainEnable", "bool",
+					title: "<b>Enable Rain Hold for this entire Timetable</b>", 
+					required: false,
+					defaultValue: false,
+					submitOnChange: false
+
 				paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
 		    }
 		}
 		section("<h1 style='font-size:1.5em; font-style: italic;'>Logging</h1>") {
-			input "infoEnable",
-      			"bool",
+			input "infoEnable", "bool",
       			title: "Enable activity logging",
       			required: false,
       			defaultValue: true
       	}
 	
 		section("<h1 style='font-size:1.5em; font-style: italic;'>Debugging</h1>") {
-			input "debugEnable",
-				"bool",
+			input "debugEnable", "bool",
 				title: "Enable debug logging", 
 				required: false,
 				defaultValue: false,
@@ -579,11 +584,28 @@ def setOutdoorTemp(aTempDevice, dTemp) {
 }
 
 
+def setOutdoorRain(aRainDevice, rainAttr) {
+	state.outdoorRainDevice = aRainDevice
+	state.rainAttribute = rainAttr
+	def rainNow = aRainDevice.currentValue(rainAttr)
+	state.rainHold = aRainDevice.currentValue(rainAttr) == "wet" ? true : false
+	logInfo "OutdoorRain update from Parent, rainNow: $rainNow." 
+	unsubscribe(recvOutdoorRainHandler)
+	subscribe(aRainDevice, rainAttr, recvOutdoorRainHandler)
+}
+
+
 def recvOutdoorTempHandler(evt) {
 	if (!state.overTempToday) { 	// if the temp goes over the limit, latch 'true' state til midnight reset
 		state.overTempToday = ( evt.value.toInteger() > state.maxOutdoorTemp.toInteger() ) ? true : false 
 		logDebug "OutdoorTemp update from Device. overTempToday: $state.overTempToday"
 	}
+}
+
+
+def recvOutdoorRainHandler(evt) {
+	state.rainHold = evt.value == "wet" ? true : false
+	logDebug "OutdoorRain update from Device. rainHold: $state.rainHold"
 }
 
 
@@ -605,6 +627,7 @@ def init(why) {
 			if(atomicState.paused == null) atomicState.paused = true // the switch visually is inverted from the logic. Default = true aka enabled/not paused.
 			if(state.inCycle == null) state.inCycle = false
 			if(state.overTempToday == null) state.overTempToday = false 
+			if(state.rainHold == null) state.rainHold = false
 			if(state.dayGroup == null) state.dayGroup = ['1': ['1':true, '2':true, '3':true, '4':true, '5':true, '6':true, '7':true, "s": "P", "name": "", "ot": false, "ra": false, "duraTime": null, "startTime": null ] ] // initial row
 
 			if(state.month2month == null) state.month2month = [:]
@@ -632,6 +655,7 @@ def reschedule() {		// midnight run to setup first schedule of the day.
 	unschedule(reschedule)
 	schedule('7 7 0 ? * *', reschedule) // reschedule the midnight run to schedule that day's work.
 	state.overTempToday = false // once a day, midnight, reset the over temp indicator
+	state.rainHold = false // once a day, midnight, reset the rain indicator
 	runIn(15, scheduleNext)
 }
 
@@ -653,6 +677,11 @@ def scheduleNext() {
 	timings = buildTimings(cronDay)
 	if (!timings) {
 		logWarn "Nothing scheduled for Today."
+		return
+	}
+
+	if (state.rainHold && rainEnable) {
+		logWarn "Rain Hold - schedule skipped for Today."
 		return
 	}
 
