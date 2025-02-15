@@ -65,7 +65,7 @@ void wet() { on() }
 void on()
 {
 	// The server will update on/off status
-	log.trace "$device ON"
+	log.trace "$device ON/WET"
 	sendEvent(name: "switch"      , value: 'on')
 	sendEvent(name: "water"       , value: 'wet')
 }
@@ -80,7 +80,7 @@ void dry() { off() }
 void off()
 {
 	// The server will update on/off status
-	log.trace "$device OFF"
+	log.trace "$device OFF/DRY"
 	sendEvent(name: "switch"      , value: 'off')
 	sendEvent(name: "water"       , value: 'dry')
 }
