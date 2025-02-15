@@ -48,7 +48,7 @@ This code is licensed as follows:
  *
  *
  *
- * csteele: v1.0.2	? 
+ * csteele: v1.0.2	Add Rain Detection to be used as a Conditional
  * csteele: v1.0.1	Send month2month and dayGroup to child Apps
  * csteele: v1.0.0	Inspired by Matt Hammond's Lighting Schedules
  *                	 Converted to capability.valve from switch 
@@ -103,7 +103,9 @@ def mainPage() {
 		  childApps.each {child ->
 		  	child.set2Month(state.month2month) 
 		  	child.set2DayGroup(state.dayGroup) 
-			child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) 
+			child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp)
+			child.setOutdoorRain(outdoorRainDevice, state.currentRainAttribute) 
+
 		  }
 	  }
     }
@@ -133,6 +135,11 @@ def advancedPage() {
 		{
 			paragraph "<i>Choose a temperature device and set the maximum value. Timetables can be conditional on the temperature exceeding the maximum.</i>"
 			  selectTemperatureDevice()		// are there days that are very hot 
+		}
+		section(menuHeader("<b>Master: Select Rain detection Device</b>"))
+		{
+			paragraph "<i>Choose a device that will supply rain data. Timetables can be conditional on the rain values.</i>"
+			  selectRainDevice()		// are there days that are wet enough 
 		}
 	}
 }
@@ -226,22 +233,50 @@ String displayDayGroups() {	// display day-of-week groups
 def selectTemperatureDevice() {
 
 	paragraph "\n<b>Temperature Device Select</b>"
-			input "outdoorTempDevice",
-      	        "capability.temperatureMeasurement",
+			input "outdoorTempDevice", "capability.temperatureMeasurement",
       	        title: "Select which device?",
       	        multiple: false,
       	        required: false,
       	        submitOnChange: true
 
-	paragraph "\n<b>Maximum Temperature </b>"
-			input "maxOutdoorTemp",
-      	        "number",
+	paragraph "\n<b>Maximum Temperature</b>"
+			input "maxOutdoorTemp", "number",
       	        title: "<i>Enter the Maximum temperature beyond which conditional Timetables will run.</i>",
       	        defaultValue: maxOutdoorTemp,
       	        multiple: false,
       	        required: false,
       	        submitOnChange: true
+}
 
+
+def selectRainDevice() {
+
+	paragraph "\n<b>Rain Device Selection</b>"
+			input "outdoorRainDevice", "capability.*",
+      	        title: "Select which device?",
+      	        multiple: false,
+      	        required: false,
+      	        submitOnChange: true
+
+	if (outdoorRainDevice) {
+		def vars = [:]
+		def c1=1
+		atts = outdoorRainDevice?.supportedAttributes.toSet().sort { it?.toString()?.toLowerCase() }
+		atts.each { v ->
+			vars[c1++] = "$v"
+		}
+
+		attributeList = vars
+		paragraph "\n<b>Rain Attribute</b>"
+			input "selectRainAttribute", "enum", options: attributeList,
+			  title: "<i>Which Attribute indicates there was enough rain to skip a cycle?</i>",
+			  defaultValue: selectRainAttribute,
+			  multiple: false,
+			  required: false,
+			  submitOnChange: true
+
+		state.currentRainAttribute = attributeList[selectRainAttribute as Integer]
+	}	
 }
 
 
@@ -308,6 +343,7 @@ def updated() {
 		child.set2Month(state.month2month) 
 		child.set2DayGroup(state.dayGroup) 
 		child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) 
+		child.setOutdoorRain(outdoorRainDevice, state.currentRainAttribute) 
 	}
 }
 
@@ -329,6 +365,7 @@ def componentInitialize(cd) {
 	cd.set2Month(state.month2month) 
 	cd.set2DayGroup(state.dayGroup) 
 	cd.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) 
+	cd.setOutdoorRain(outdoorRainDevice, state.currentRainAttribute) 
 }
 
 
