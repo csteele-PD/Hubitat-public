@@ -1,7 +1,7 @@
 /* 
 =============================================================================
 Hubitat Elevation Application
-Sprinkler Scheduler (parent application)
+Sprinkler Scheduler (parent application) Sprinkler Schedule Manager
 
     Inspiration: Lighting Schedules https://github.com/matt-hammond-001/hubitat-code
     Inspiration: github example from Hubitat of lightsUsage.groovy
@@ -16,7 +16,6 @@ This code is licensed as follows:
 	BSD 3-Clause License
 	
 	Copyright (c) 2023, C Steele
-	Copyright (c) 2022 Hubitat, Inc.  All Rights Reserved (Bruce Ravenel) 
 	Copyright (c) 2020, Matt Hammond
 	All rights reserved.
 	
@@ -252,7 +251,7 @@ def selectTemperatureDevice() {
 def selectRainDevice() {
 
 	paragraph "\n<b>Rain Device Selection</b>"
-			input "outdoorRainDevice", "capability.*",
+			input "outdoorRainDevice", "capability.waterSensor",
       	        title: "Select which device?",
       	        multiple: false,
       	        required: false,
@@ -327,7 +326,7 @@ def remDayGroup(evt = null) {  	// remove a Local dayGroup & dayGroupSettings
 
 /*
 -----------------------------------------------------------------------------
-Standard handlers, and mode-change handler
+Standard Hubitat App methods
 -----------------------------------------------------------------------------
 */
 
@@ -358,6 +357,12 @@ def initialize() {
 }
 
 
+/*
+-----------------------------------------------------------------------------
+Helper/Handler functions
+-----------------------------------------------------------------------------
+*/
+
 // called by each child when it wants an update of these values.
 def componentInitialize(cd) { 
 	if (!advancedOption) return
@@ -387,12 +392,6 @@ def logDebug(msg) { // allows either log.debug or logDebug like the Child code.
 def logInfo(msg) { // allows either log.info or logInfo like the Child code.
 	log.info msg
 }
-
-/*
------------------------------------------------------------------------------
-Helper/Handler functions
------------------------------------------------------------------------------
-*/
 
 def getFormat(type, myText=""){            // Modified from @Stephack Code
 	if(type == "line") return "<hr style='background-color:#1A77C9; height: 1px; border: 0;'>"
