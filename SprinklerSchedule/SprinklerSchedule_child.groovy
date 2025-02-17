@@ -53,7 +53,6 @@ This code is licensed as follows:
  *                	 Converted to capability.valve from switch 
  *
  */
-/// DEVELOPMENT FORK
  
 	public static String version()      {  return "v1.0.2"  }
 
@@ -73,21 +72,6 @@ preferences {
 }
 
 def main(){
-///    state.dayGroup = null
-///    state.valves = null
-///    state.remove("month2month") ///
-///		['1': ['mon':true, 'tue':true, 'wed':true, 'thu':true, 'fri':true, 'sat':true, 'sun':true]
-/// app.removeSetting("dayGroupSettingsMerge")
-///    state.remove("dayGroupSettingsTemp")
-/// dayGroup = [ "1": [ "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": true, "s": "C", "ot": true, "name": "" ], "2": [ "1": false, "2": false, "3": false, "4": false, "5": false, "6": false, "7": false, "s": "C", "ot": false, "name": "" ] ]
-/// dayGroupMaster = [ "1": [ "1": true, "2": true, "3": true, "4": true, "5": true, "6": false, "7": false, "s": "P", "name": "" ], "2": [ "1": false, "2": false, "3": false, "4": false, "5": false, "6": true, "7": true, "s": "P", "name": "" ] ]
-/*
-	.containsKey("xx")
-	.containsValue("xx")
-*/
-
-
-///
 	init(1) 	// during first time install of child, along with installCheck(), pre-populate any un-initialized elements 
 	dynamicPage(name: "main", title: "", uninstall: true, install: true){
 		updateMyLabel()
@@ -489,7 +473,6 @@ String noButtonLink(String btnName, String linkText, color = "#1A77C9", font = "
 }
 
 void appButtonHandler(btn) {
-	logDebug "appButtonHandler: $btn" /// delete for Release
 	// only one button can be pressed, remove their states, since "btn" contains the only valid one.
 	state.remove("duraTimeBtn") 
 	state.remove("dayGrpBtn")
@@ -601,7 +584,6 @@ def setOutdoorTemp(aTempDevice, dTemp) {
 }
 
 
-///		child.setOutdoorRain(outdoorRainDevice, selectRainAttribute) 
 def setOutdoorRain(aRainDevice, rainAttr) {
 	state.outdoorRainDevice = aRainDevice
 	state.rainAttribute = rainAttr
@@ -685,9 +667,6 @@ def scheduleNext() {
 		return
 	}
 	
-/// "Seconds" "Minutes" "Hours" "Day Of Month" "Month" "Day Of Week" "Year"
-/// schedule('0 */10 * ? * *', mymethod, [data: ["myKey":"myValue"]])
-///     schedule(new Date(new Date().time + 5_000), runTest, [data: ["myKey":"myValueFromScheduleTest"]]) // schedules a job 5 seconds from now
 	unschedule(reschedule)
 	schedule('7 7 0 ? * *', reschedule) // reschedule the midnight run to schedule that day's work.
 
@@ -696,7 +675,6 @@ def scheduleNext() {
 	def cronDay = calendar.get(Calendar.DAY_OF_WEEK);
 
 	timings = buildTimings(cronDay)
-	logDebug "Timings - DayOfWeek: $cronDay, $timings" ///
 	if (!timings) {
 		logWarn "Nothing scheduled for Today."
 		return
@@ -720,8 +698,6 @@ def scheduleNext() {
 	}
 	logDebug "schedule('0 $stm $sth ? * *', schedHandler, [data: ['dKey': $sk]]), hasSched: $hasSched"
 	if (hasSched) { schedule("0 ${stm} ${sth} ? * *", schedHandler, [data: ["dKey":"$sk"]]) } else {logInfo "Nothing scheduled."}
-///	if (true) { runIn(10, schedHandler, [data: ["dKey": "$sk"]]) } ///
-///    logDebug "schedHandler in 10 seconds with $sk" ///
 }
 
 
@@ -775,13 +751,10 @@ def schedHandler(data) {
 	currentMonth = new Date().format("M") 	// Get the current month as a number (1-12)
 	currentMonthPercentage = state.month2month ? state.month2month[currentMonth].toDouble() / 100 : 1  // Lookup the percent in month2month or 1 
 	dura = 60 * duraT * currentMonthPercentage		// duraTime is in minutes, runIn is in seconds
-//	duraSeconds = (dura.toInteger() > 20) ? dura.toInteger() : 20 ///
 	duraSeconds = Math.max(dura.toInteger(), 20) // Ensure minimum valve timing of 20 seconds
 	logDebug "runIn($duraSeconds, scheduleDurationHandler, [vKey: $vk, dS: $duraSeconds, dV: $valve2start])"
 
  	runIn(duraSeconds, scheduleDurationHandler, [data: [vKey: "$vk", dS: "$duraSeconds", dV: "$valve2start"]]) 
-///	runIn(duraT, scheduleDurationHandler, [data: [vKey: "$vk", dS: "$duraSeconds", dV: "$valve2start"]])  /// duraSeconds
-///   logDebug "run: scheduleDurationHandler in 3 seconds with $vk, $duraSeconds, $valve2start" ///
 }
 
 
@@ -810,8 +783,6 @@ def scheduleDurationHandler(data) {
 			logInfo "valve $vk open."
 
 			runIn(duraSeconds, scheduleDurationHandler, [data: [vKey: "$vk", dS: "$duraSeconds", dV: "$valve2start"]])
-///			runIn(7, scheduleDurationHandler, [data: [vKey: "$vk", dS: "$duraSeconds", dV: "$valve2start"]])  /// duraSeconds
-///	      logDebug "run again: scheduleDurationHandler: vKey: $vk, dS: $data.dS, dV: $valve2start" ///
 		}
 	} else {
 		state.inCycle = false
