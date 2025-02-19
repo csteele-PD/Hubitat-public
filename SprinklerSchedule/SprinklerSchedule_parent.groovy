@@ -47,7 +47,7 @@ This code is licensed as follows:
  *
  *
  *
- * csteele: v1.0.2	Add Rain Detection to be used as a Conditional
+ * csteele: v1.0.2	Add Over Temp and Rain Detection to be used as a Conditional
  * csteele: v1.0.1	Send month2month and dayGroup to child Apps
  * csteele: v1.0.0	Inspired by Matt Hammond's Lighting Schedules
  *                	 Converted to capability.valve from switch 
@@ -81,33 +81,32 @@ def mainPage() {
 		state.appInstalled = app.getInstallationState() 
 		if (state.appInstalled != 'COMPLETE') return installCheck()
 
-        section() {
-            app (name: "sprinklerTimetable",
-                 appName: "Sprinkler Valve Timetable",
-                 namespace: "csteele",
-                 title: "Create New Sprinkler Schedule",
-                 multiple: true)
-        }
-
-	  section() {
-	  	input "advancedOption", "bool", title: "Display Options that become common to all Sprinkler Valve Timetables.", required: false, defaultValue: false, submitOnChange: true
-		input name: "quickref", type: "hidden", title:"<a href='https://www.hubitatcommunity.com/QuikRef/sprinklerScheduleManagerInfo/index.html' target='_blank'>Quick Reference ${version()}</a>"
-	  }
-	  if (advancedOption) {
-		  section(menuHeader("Advanced Options Page"))
-		  {
-		  	href "advancedPage", title: "Advanced Options", required: false
-		  }
-		  // Send the current Maps to each Child, exactly like an Update-from-Done would do.
-		  childApps.each {child ->
-		  	child.set2Month(state.month2month) 
-		  	child.set2DayGroup(state.dayGroup) 
-			child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp)
-			child.setOutdoorRain(outdoorRainDevice, state.currentRainAttribute) 
-
-		  }
-	  }
-    }
+		section() {
+      	      app (name: "sprinklerTimetable",
+      	           appName: "Sprinkler Valve Timetable",
+      	           namespace: "csteele",
+      	           title: "Create New Sprinkler Schedule",
+      	           multiple: true)
+		}
+	
+		section() {
+		  	input "advancedOption", "bool", title: "Display Options that become common to all Sprinkler Valve Timetables.", required: false, defaultValue: false, submitOnChange: true
+			input name: "quickref", type: "hidden", title:"<a href='https://www.hubitatcommunity.com/QuikRef/sprinklerScheduleManagerInfo/index.html' target='_blank'>Quick Reference ${version()}</a>"
+		}
+		if (advancedOption) {
+			  section(menuHeader("Advanced Options Page"))
+			  {
+			  	href "advancedPage", title: "Advanced Options", required: false
+			  }
+			  // Send the current Maps to each Child, exactly like an Update-from-Done would do.
+			  childApps.each {child ->
+			  	child.set2Month(state.month2month) 
+			  	child.set2DayGroup(state.dayGroup) 
+				child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp)
+				child.setOutdoorRain(outdoorRainDevice, state.currentRainAttribute) 
+			  }
+		}
+	}
 }
 
 
@@ -118,8 +117,9 @@ Advanced Page handlers
 */
 
 def advancedPage() {
-	dynamicPage(name: "advancedPage", title: "<i>Advanced Options Page</i>", uninstall: false, install: false)
-	{
+	def subTitle = getFormat("title", "Sprinkler Schedules")
+	dynamicPage(name: "advancedPage", title: subTitle, uninstall: false, install: false) {
+		displaySubHeader()
 		section(menuHeader("<b>Master: Adjust valve timing by Month</b>"))
 		{
 			paragraph displayMonths()		// display Monthly percentages
@@ -127,18 +127,18 @@ def advancedPage() {
 		}
 		section(menuHeader("<b>Master: Select Days into Groups</b>"))
 		{
-			paragraph "<i>Groups defined here will appear as un-editable groups in every Timetable. </i>"
+			paragraph "<i>Groups defined here will appear as un-editable groups in every Timetable (child). </i>"
 			paragraph displayDayGroups()		// display day-of-week groups
 		}
 		section(menuHeader("<b>Master: Select Temperature Device</b>"))
 		{
 			paragraph "<i>Choose a temperature device and set the maximum value. Timetables can be conditional on the temperature exceeding the maximum.</i>"
-			  selectTemperatureDevice()		// are there days that are very hot 
+			  selectTemperatureDevice()		// are there days that are very hot ?
 		}
 		section(menuHeader("<b>Master: Select Rain detection Device</b>"))
 		{
-			paragraph "<i>Choose a device that will supply rain data. Timetables can be conditional on the rain values.</i>"
-			  selectRainDevice()		// are there days that are wet enough 
+			paragraph "<i>Choose a Water Sensor device that will supply rain data. Timetables can be conditional on the rain values.</i>"
+			  selectRainDevice()		// are there days that are wet enough ?
 		}
 	}
 }
@@ -314,12 +314,19 @@ def addDayGroup(evt = null) {
 
 def remDayGroup(evt = null) {  	// remove a Local dayGroup & dayGroupSettings
 	dayGroupSize = (state.dayGroup ?: [:]).keySet().size()
-	if (dayGroupSize >= 1) {
+	if (dayGroupSize > 1) {
 		// Determine the key to delete
-		keyToDelete = state.dayGroup.isEmpty() ? evt : (evt.toInteger() - (state.dayGroupMaster ?: [:]).size()).toString()
-		
+		keyToDelete = (evt.toInteger() - (state.dayGroupMaster ?: [:]).size()).toString()		
 		logDebug "remove another dayGroup map: $dayGroupSize, $keyToDelete, evt:$evt"
 		if (state.dayGroup.containsKey(keyToDelete)) { state.dayGroup.remove(keyToDelete) } 
+		// Re-map keys to be sequential
+		def dayGrpReOrder = [:]
+		def counter = 1
+		state.dayGroup.sort { it.key.toInteger() }.each { k, v ->
+		    dayGrpReOrder["${counter}"] = v
+		    counter++
+		}
+		state.dayGroup = dayGrpReOrder
 	}
 }
 
@@ -396,8 +403,8 @@ def logInfo(msg) { // allows either log.info or logInfo like the Child code.
 def getFormat(type, myText=""){            // Modified from @Stephack Code
 	if(type == "line") return "<hr style='background-color:#1A77C9; height: 1px; border: 0;'>"
 	if(type == "title") return "<h2 style='color:#1A77C9;font-weight: bold'>${myText}</h2>"
+	if(type == "subTitle") return "<p style='color:#1A77C9;font-weight: bold; font-size: 1.4em;'>${myText}</p>"
 }
-
 
 def displayHeader() {
 	section (getFormat("title", "Sprinkler Schedules")) {
@@ -406,6 +413,12 @@ def displayHeader() {
 	}
 }
 
+def displaySubHeader() {
+	section (getFormat("subTitle", "Advanced Options")) {
+		paragraph "<div style='color:#1A77C9;text-align:right;font-weight:small;font-size:9px;'>Developed by: C Steele, Matt Hammond <br/>Current Version: ${version()} -  ${thisCopyright}</div>"
+		paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
+	}
+}
 
 String buttonLink(String btnName, String linkText, color = "#1A77C9", font = "15px") {
 	"<div class='form-group'><input type='hidden' name='${btnName}.type' value='button'></div><div><div class='submitOnChange' onclick='buttonClick(this)' style='color:$color;cursor:pointer;font-size:$font'>$linkText</div></div><input type='hidden' name='settings[$btnName]' value=''>"
