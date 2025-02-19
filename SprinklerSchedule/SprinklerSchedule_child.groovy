@@ -47,7 +47,7 @@ This code is licensed as follows:
  *
  *
  *
- * csteele: v1.0.2	Add Rain Detection to be used as a Conditional
+ * csteele: v1.0.2	Add Over Temp and Rain Detection to be used as a Conditional
  * csteele: v1.0.1	Added month2month and dayGroupMaster from Parent
  * csteele: v1.0.0	Inspired by Matt Hammond's Lighting Schedule (child)
  *                	 Converted to capability.valve from switch 
@@ -456,8 +456,10 @@ def masterGroupMerge(masterDayGroupIn = [:]) { // lots of deep copies of hashMap
 	}
 
 	//  Part 3: independent of masterDayGroupIn vs state.dayGroupMaster, all the child dayGroup rows are cloned & keys renumbered.
+	dayGroupSize = (dayGroupMerge ?: [:]).keySet().size()		// renumber, starting with the size of dayGroupMerge
 	state.dayGroup.each { k, v -> // merge dayGroup into 
-		dayGroupMerge[(k.toInteger() + dayGroupMerge.size()).toString()] = v.clone() // deep copy
+		dayGroupSize++
+		dayGroupMerge[dayGroupSize] = v.clone() // deep copy
 	}
 
 	// then clone it for the next pass.
