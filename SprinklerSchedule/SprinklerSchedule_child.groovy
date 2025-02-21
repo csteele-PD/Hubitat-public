@@ -79,7 +79,7 @@ def main(){
 		state.appInstalled = app.getInstallationState() // validate that the Done button has been clicked the first time
 		if (state.appInstalled != 'COMPLETE') return installCheck() 
 
-		section("<h1 style='font-size:1.5em; font-style: italic;'>General</h1>") {
+      	section(menuHeader("General")) {
 			label title: "<b>Name for this application</b>", required: false, submitOnChange: true
 			if (!app.label) {
 				app.updateLabel(app.name)
@@ -108,27 +108,41 @@ def main(){
       	        required: false,
       	        submitOnChange: true
 	
- 			paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
       	}
 	
-      	// provide some feedback on which valves are On
-		String str = valves?.collect { dev -> "${dev.label ?: dev.name} is ${dev.currentValue('valve', true) == 'open' ? 'On' : 'Off'}"}?.join(', ') ?: ""
-		if (state.overTempToday) { str += "<br> Sometime today, the outside temperature exceeded the limit you set of $state.maxOutdoorTemp." }
+		section(menuHeader("Timetable Status & Logging")) {
+			if (valves) {
+			 // provide some feedback on which valves are On
+			 	String str = "<div style='background-color: rgba(73, 163, 125, 0.3);'>"
+				str += valves?.collect { dev -> "<b>${dev.label ?: dev.name}</b> is ${dev.currentValue('valve', true) == 'open' ? 'On' : 'Off'}"}?.join(', ') ?: ""
+				if (state.overTempToday) { str += "<br> Sometime today, the outside temperature exceeded the limit you set of $state.maxOutdoorTemp." }
+			
+				if (state.month2month) {
+					  	str += "<br><b>Adjust valve timing</b> by Month is active" +
+					  	"<br><b>Rain hold</b> is $state.rainHold"
+				}
+				str += "</div>"
+				paragraph str
+			}
 
-      	section(menuHeader("Valve Status")) {
-			paragraph str
-      	}
-      	
-		if (state.month2month) {
-			section(menuHeader("Parent - Advanced Options")) {
-			  	paragraph "Adjust valve timing by Month is active"
-			  	paragraph "Rain hold is $state.rainHold"
-				paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
+			input "infoEnable", "bool",
+				title: "Enable activity logging",
+				required: false,
+				defaultValue: true, width: 2
+			input "debugEnable", "bool",
+				title: "Enable debug logging", 
+				required: false,
+				defaultValue: false,
+				submitOnChange: true, width: 2
+			
+			if (debugEnable) {
+				input "debugTimeout", "enum", required: false, defaultValue: "0", title: "Automatic debug Log Disable Timeout?", width: 3,  \
+				    	options: [ "0":"None", "1800":"30 Minutes", "3600":"60 Minutes", "86400":"1 Day" ]
 			}
 		}
 		
 		if (valves) {
-			section("<h1 style='font-size:1.5em; font-style: italic;'>Schedule</h1>") {
+			section(menuHeader("Schedule")) {
 		
 				paragraph "<b>Select Days into Groups</b>"
 				paragraph displayDayGroups()		// display day-of-week groups - Section I
@@ -150,26 +164,6 @@ def main(){
 
 				paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
 		    }
-		}
-		section("<h1 style='font-size:1.5em; font-style: italic;'>Logging</h1>") {
-			input "infoEnable", "bool",
-      			title: "Enable activity logging",
-      			required: false,
-      			defaultValue: true
-      	}
-	
-		section("<h1 style='font-size:1.5em; font-style: italic;'>Debugging</h1>") {
-			input "debugEnable", "bool",
-				title: "Enable debug logging", 
-				required: false,
-				defaultValue: false,
-				submitOnChange: true
-
-			if (debugEnable) {
-				input "debugTimeout", "enum", required: false, defaultValue: "0", title: "Automatic debug Log Disable Timeout?",  \
-            		    	options: [ "0":"None", "1800":"30 Minutes", "3600":"60 Minutes", "86400":"1 Day" ]
-			}
-			paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
 		}
 	}
 }
@@ -678,12 +672,12 @@ def scheduleNext() {
 
 	timings = buildTimings(cronDay)
 	if (!timings) {
-		logWarn "Nothing scheduled for Today."
+		logWarn "Nothing scheduled for $app.label Today."
 		return
 	}
 
 	if (state.rainHold && rainEnable) {
-		logWarn "Rain Hold - schedule skipped for Today."
+		logWarn "Rain Hold - schedule skipped for $app.label Today."
 		return
 	}
 
@@ -699,7 +693,13 @@ def scheduleNext() {
 	    break;	// quit the for loop on a schedule of first startTime that's in the future.
 	}
 	logDebug "schedule('0 $stm $sth ? * *', schedHandler, [data: ['dKey': $sk]]), hasSched: $hasSched"
-	if (hasSched) { schedule("0 ${stm} ${sth} ? * *", schedHandler, [data: ["dKey":"$sk"]]) } else {logInfo "Nothing scheduled."}
+	if (hasSched) { 
+		schedule("0 ${stm} ${sth} ? * *", schedHandler, [data: ["dKey":"$sk"]]) 
+		logInfo "$app.label scheduled today."
+	}
+	else {
+		logInfo "Nothing scheduled for $app.label today."
+	}
 }
 
 
@@ -744,7 +744,7 @@ def schedHandler(data) {
 
 	// some valves need turning on for their duration.
 	valves.find { it.id == "$vk" }?.open()
-	logInfo "valve $vk open."
+	logInfo "valve ${vk.label ?: vk.name} open."
 	state.inCycle = true
 	atomicState.cycleStart = now()
 	updateMyLabel()
@@ -769,7 +769,7 @@ def scheduleDurationHandler(data) {
 
 	// stop the valve and start the next, if any.
 	valves.find { it.id == "$cd" }?.close()
-	logInfo "Valve $cd close."
+	logInfo "Valve ${cd.label ?: cd.name} close."
 
 	//valves*.close()	// close all the valves
     
@@ -782,7 +782,7 @@ def scheduleDurationHandler(data) {
 		if (vk != null) {
 			valve2start = valve2start.tail()
 			valves.find { it.id == "$vk" }?.open()
-			logInfo "valve $vk open."
+			logInfo "valve ${vk.label ?: vk.name} open."
 
 			runIn(duraSeconds, scheduleDurationHandler, [data: [vKey: "$vk", dS: "$duraSeconds", dV: "$valve2start"]])
 		}
