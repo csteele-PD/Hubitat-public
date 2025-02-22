@@ -113,14 +113,13 @@ def main(){
 		section(menuHeader("Timetable Status & Logging")) {
 			if (valves) {
 			 // provide some feedback on which valves are On
-			 	String str = "<div style='background-color: rgba(73, 163, 125, 0.3);'>"
-				str += valves?.collect { dev -> "<b>${dev.label ?: dev.name}</b> is ${dev.currentValue('valve', true) == 'open' ? 'On' : 'Off'}"}?.join(', ') ?: ""
-				if (state.overTempToday) { str += "<br> Sometime today, the outside temperature exceeded the limit you set of $state.maxOutdoorTemp." }
-			
+			 	String str = "<div style='background-color: rgba(73, 163, 125, 0.3);'>"	
 				if (state.month2month) {
-					  	str += "<br><b>Adjust valve timing</b> by Month is active" +
-					  	"<br><b>Rain hold</b> is $state.rainHold"
+					  	str += "<b>Adjust valve timing</b> by Month is active<br>" +
+					  	"<b>Rain hold</b> is $state.rainHold<br>"
 				}
+				if (state.overTempToday) { str += "Sometime today, the outside temperature exceeded the limit you set of $state.maxOutdoorTemp.<br>" }
+				str += valves?.collect { dev -> "<b>${dev.label ?: dev.name}</b> is ${dev.currentValue('valve', true) == 'open' ? 'On' : 'Off'}"}?.join(', ') ?: ""
 				str += "</div>"
 				paragraph str
 			}
@@ -703,12 +702,6 @@ def scheduleNext() {
 }
 
 
-def logsOff() {
-	logWarn "debug logging Disabled..."
-	app?.updateSetting("debugEnable",[value:"false",type:"bool"])
-}
-
-
 /*
 -----------------------------------------------------------------------------
    Schedule Helper/Handler functions
@@ -744,7 +737,7 @@ def schedHandler(data) {
 
 	// some valves need turning on for their duration.
 	valves.find { it.id == "$vk" }?.open()
-	logInfo "valve ${vk.label ?: vk.name} open."
+	logInfo "valve $vk open."
 	state.inCycle = true
 	atomicState.cycleStart = now()
 	updateMyLabel()
@@ -769,7 +762,7 @@ def scheduleDurationHandler(data) {
 
 	// stop the valve and start the next, if any.
 	valves.find { it.id == "$cd" }?.close()
-	logInfo "Valve ${cd.label ?: cd.name} close."
+	logInfo "Valve $cd close."
 
 	//valves*.close()	// close all the valves
     
@@ -782,7 +775,7 @@ def scheduleDurationHandler(data) {
 		if (vk != null) {
 			valve2start = valve2start.tail()
 			valves.find { it.id == "$vk" }?.open()
-			logInfo "valve ${vk.label ?: vk.name} open."
+			logInfo "valve $vk open."
 
 			runIn(duraSeconds, scheduleDurationHandler, [data: [vKey: "$vk", dS: "$duraSeconds", dV: "$valve2start"]])
 		}
@@ -859,6 +852,12 @@ String fixDateTimeString(eventDate) {
 
     String myTime = showTime ? target.format('h:mma').toLowerCase() : ''
     return myTime ? "${myDate} at ${myTime}" : myDate
+}
+
+
+def logsOff() {
+	logWarn "debug logging Disabled..."
+	app?.updateSetting("debugEnable",[value:"false",type:"bool"])
 }
 
 
