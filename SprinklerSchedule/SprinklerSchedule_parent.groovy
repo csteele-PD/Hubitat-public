@@ -47,6 +47,7 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.3	Initial Release (end Beta)
  * csteele: v1.0.2	Add Over Temp and Rain Detection to be used as a Conditional
  * csteele: v1.0.1	Send month2month and dayGroup to child Apps
  * csteele: v1.0.0	Inspired by Matt Hammond's Lighting Schedules
@@ -54,14 +55,15 @@ This code is licensed as follows:
  *
  */
  
-	public static String version()      {  return "v1.0.2"  }
+	public static String version()      {  return "v1.0.3"  }
 
 definition(
 	name: "Sprinkler Schedule Manager",
 	namespace: "csteele",
 	author: "C Steele",
 	description: "Controls switches to a timing schedule",
-	documentationLink: "https://github.com//README.md",
+	importUrl: "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/refs/heads/master/SprinklerSchedule/SprinklerSchedule_parent.groovy",
+	documentationLink: "https://www.hubitatcommunity.com/QuikRef/sprinklerScheduleManagerInfo/index.html",
 	singleInstance: true,
 	iconUrl: "",
 	iconX2Url: "",
@@ -184,7 +186,6 @@ String displayDayGroups() {	// display day-of-week groups
 
 		state.dayGroup."$dgK"."$dgI" = state.dayGroup."$dgK"."$dgI" ? false : true // toggle the state.
 		state.remove("dayGroupBtn") // only once 
-		logDebug "displayDayGroups Item: $dgK.$dgI"
 	}
 
 	String str = "<script src='https://code.iconify.design/iconify-icon/1.0.0/iconify-icon.min.js'></script>"
@@ -240,7 +241,7 @@ def selectTemperatureDevice() {
 
 	paragraph "\n<b>Maximum Temperature</b>"
 			input "maxOutdoorTemp", "number",
-      	        title: "<i>Enter the Maximum temperature beyond which conditional Timetables will run.</i>",
+      	        title: "<i>Enter the Maximum temperature beyond which conditional Timetables will be skipped.</i>",
       	        defaultValue: maxOutdoorTemp,
       	        multiple: false,
       	        required: false,
@@ -307,7 +308,6 @@ def addDayGroup(evt = null) {
     def dayGroupSize = state.dayGroup.size() // More efficient
     def newIndex = (dayGroupSize + 1).toString() // Ensures key consistency
 
-    logDebug "Adding another dayGroup map: $newIndex"
     state.dayGroup[newIndex] = dayGroupTemplate.clone() // Clone to avoid reference issues
 }
 
@@ -317,7 +317,6 @@ def remDayGroup(evt = null) {  	// remove a Local dayGroup & dayGroupSettings
 	if (dayGroupSize > 1) {
 		// Determine the key to delete
 		keyToDelete = (evt.toInteger() - (state.dayGroupMaster ?: [:]).size()).toString()		
-		logDebug "remove another dayGroup map: $dayGroupSize, $keyToDelete, evt:$evt"
 		if (state.dayGroup.containsKey(keyToDelete)) { state.dayGroup.remove(keyToDelete) } 
 		// Re-map keys to be sequential
 		def dayGrpReOrder = [:]
