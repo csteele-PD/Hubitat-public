@@ -47,6 +47,7 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.3	Initial Release (end Beta)
  * csteele: v1.0.2	Add Over Temp and Rain Detection to be used as a Conditional
  * csteele: v1.0.1	Added month2month and dayGroupMaster from Parent
  * csteele: v1.0.0	Inspired by Matt Hammond's Lighting Schedule (child)
@@ -54,7 +55,7 @@ This code is licensed as follows:
  *
  */
  
-	public static String version()      {  return "v1.0.2"  }
+	public static String version()      {  return "v1.0.3"  }
 
 definition(
 	name: "Sprinkler Valve Timetable",
@@ -62,7 +63,8 @@ definition(
 	parent: "csteele:Sprinkler Schedule Manager",
 	author: "C Steele",
 	description: "Controls valves to a timing schedule",
-	documentationLink: "https://github.com//README.md",
+	importUrl: "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/refs/heads/master/SprinklerSchedule/SprinklerSchedule_child.groovy",
+	documentationLink: "https://www.hubitatcommunity.com/QuikRef/sprinklerScheduleManagerInfo/index.html",
 	iconUrl: "",
 	iconX2Url: "",
 )
@@ -112,11 +114,13 @@ def main(){
 	
 		section(menuHeader("Timetable Status & Logging")) {
 			if (valves) {
+				currentMonth = new Date().format("M") 	// Get the current month as a number (1-12)
+				currentMonthPercentage = state.month2month ? state.month2month[currentMonth].toDouble() : 1  // Lookup the percent in month2month or 1 
 			 // provide some feedback on which valves are On
 			 	String str = "<div style='background-color: rgba(73, 163, 125, 0.3);'>"	
 				if (state.month2month) {
-					  	str += "<b>Adjust valve timing</b> by Month is active<br>" +
-					  	"<b>Rain hold</b> is $state.rainHold<br>"
+					str += "<b>Adjust valve timing</b> by Month is active. Current month is: <b>$currentMonthPercentage%</b><br>" +
+					"<b>Rain hold</b> is $state.rainHold<br>"
 				}
 				if (state.overTempToday) { str += "Sometime today, the outside temperature exceeded the limit you set of $state.maxOutdoorTemp.<br>" }
 				str += valves?.collect { dev -> "<b>${dev.label ?: dev.name}</b> is ${dev.currentValue('valve', true) == 'open' ? 'On' : 'Off'}"}?.join(', ') ?: ""
@@ -156,7 +160,7 @@ def main(){
 				  selectDayGroup()
 			
 				input "rainEnable", "bool",
-					title: "<b>Enable Rain Hold for this entire Timetable</b>", 
+					title: "<b>Enable Rain Hold</b> for this entire Timetable", 
 					required: false,
 					defaultValue: false,
 					submitOnChange: false
@@ -864,6 +868,7 @@ def logsOff() {
 def sectFormat(type, myText=""){ 
 	if(type == "line") return "<hr style='background-color:#1A77C9; height: 1px; border: 0;'>"
 	if(type == "title") return "<h2 style='color:#1A77C9;font-weight: bold'>${myText}</h2>"
+	if(type == "subTitle") return "<p style='color:#1A77C9;font-weight: bold; font-size: 1.4em;'>${myText}</p>"
 }
 
 
