@@ -47,6 +47,8 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.4	adjusted valve open/close messages to use device label or name.
+ *				 minimized Temp and Rain device attributes
  * csteele: v1.0.3	Initial Release (end Beta)
  * csteele: v1.0.2	Add Over Temp and Rain Detection to be used as a Conditional
  * csteele: v1.0.1	Added month2month and dayGroupMaster from Parent
@@ -55,7 +57,7 @@ This code is licensed as follows:
  *
  */
  
-	public static String version()      {  return "v1.0.3"  }
+	public static String version()      {  return "v1.0.4"  }
 
 definition(
 	name: "Sprinkler Valve Timetable",
@@ -573,7 +575,7 @@ def set2DayGroup(dayGroupIn) {
 }
 
 def setOutdoorTemp(aTempDevice, dTemp) {
-	state.outdoorTempDevice = aTempDevice
+	state.outdoorTempDevice = aTempDevice.currentStates
 	state.maxOutdoorTemp = dTemp
 	def tempNow = aTempDevice.currentValue("temperature")
 	state.overTempToday = ( tempNow > state.maxOutdoorTemp.toInteger() ) ? true : false
@@ -584,7 +586,7 @@ def setOutdoorTemp(aTempDevice, dTemp) {
 
 
 def setOutdoorRain(aRainDevice, rainAttr) {
-	state.outdoorRainDevice = aRainDevice
+	state.outdoorRainDevice = aRainDevice.currentStates
 	state.rainAttribute = rainAttr
 	def rainNow = aRainDevice.currentValue(rainAttr)
 	state.rainHold = aRainDevice.currentValue(rainAttr) == "wet" ? true : false
@@ -631,7 +633,7 @@ def init(why) {
 
 			if(state.month2month == null) state.month2month = [:]
 			if(state.dayGroupMaster == null) state.dayGroupMaster = [:]
-			valves.each { dev -> if(!state.valves["$dev.id"]) { state.valves["$dev.id"] = ['dayGroup':['1']] } } 
+			settings.valves.each { dev -> if(!state.valves["$dev.id"]) { state.valves["$dev.id"] = ['dayGroup':['1']] } } 
 			break; 
 	}
 }
@@ -739,9 +741,10 @@ def schedHandler(data) {
 		valve2start = valve2start.tail()
 	}
 
+   	currentValve = settings.valves?.find{it.id == "$vk"}
 	// some valves need turning on for their duration.
-	valves.find { it.id == "$vk" }?.open()
-	logInfo "valve $vk open."
+	currentValve?.open()
+	logInfo "Valve ${currentValve.label ?: currentValve.name} opened."
 	state.inCycle = true
 	atomicState.cycleStart = now()
 	updateMyLabel()
@@ -764,9 +767,10 @@ def scheduleDurationHandler(data) {
 	valve2start = data.dV as String
 	logDebug "schedDurHandler: valveStop: $data.vKey, in Duration: $duraSeconds, next: $valve2start"
 
+   	currentValve = settings.valves?.find{it.id == "$cd"}
 	// stop the valve and start the next, if any.
-	valves.find { it.id == "$cd" }?.close()
-	logInfo "Valve $cd close."
+	currentValve?.close()
+	logInfo "Valve ${currentValve.label ?: currentValve.name} closed."
 
 	//valves*.close()	// close all the valves
     
@@ -778,8 +782,9 @@ def scheduleDurationHandler(data) {
 		vk = valve2start[0] as String
 		if (vk != null) {
 			valve2start = valve2start.tail()
-			valves.find { it.id == "$vk" }?.open()
-			logInfo "valve $vk open."
+			currentValve = settings.valves?.find{it.id == "$vk"}
+			currentValve?.open()
+			logInfo "Valve ${currentValve.label ?: currentValve.name} opened."
 
 			runIn(duraSeconds, scheduleDurationHandler, [data: [vKey: "$vk", dS: "$duraSeconds", dV: "$valve2start"]])
 		}
