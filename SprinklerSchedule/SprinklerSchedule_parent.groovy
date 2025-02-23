@@ -1,7 +1,7 @@
 /* 
 =============================================================================
 Hubitat Elevation Application
-Sprinkler Scheduler (parent application) Sprinkler Schedule Manager
+Sprinkler Schedule (child application) Sprinkler Valve Timetable
 
     Inspiration: Lighting Schedules https://github.com/matt-hammond-001/hubitat-code
     Inspiration: github example from Hubitat of lightsUsage.groovy
@@ -47,66 +47,128 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.4	adjusted valve open/close messages to use device label or name.
+ *				 minimized Temp and Rain device attributes
  * csteele: v1.0.3	Initial Release (end Beta)
  * csteele: v1.0.2	Add Over Temp and Rain Detection to be used as a Conditional
- * csteele: v1.0.1	Send month2month and dayGroup to child Apps
- * csteele: v1.0.0	Inspired by Matt Hammond's Lighting Schedules
+ * csteele: v1.0.1	Added month2month and dayGroupMaster from Parent
+ * csteele: v1.0.0	Inspired by Matt Hammond's Lighting Schedule (child)
  *                	 Converted to capability.valve from switch 
  *
  */
  
-	public static String version()      {  return "v1.0.3"  }
+	public static String version()      {  return "v1.0.4"  }
 
 definition(
-	name: "Sprinkler Schedule Manager",
+	name: "Sprinkler Valve Timetable",
 	namespace: "csteele",
+	parent: "csteele:Sprinkler Schedule Manager",
 	author: "C Steele",
-	description: "Controls switches to a timing schedule",
-	importUrl: "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/refs/heads/master/SprinklerSchedule/SprinklerSchedule_parent.groovy",
+	description: "Controls valves to a timing schedule",
+	importUrl: "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/refs/heads/master/SprinklerSchedule/SprinklerSchedule_child.groovy",
 	documentationLink: "https://www.hubitatcommunity.com/QuikRef/sprinklerScheduleManagerInfo/index.html",
-	singleInstance: true,
 	iconUrl: "",
 	iconX2Url: "",
 )
 
-
 preferences {
-	page(name: "mainPage")
-	page(name: "advancedPage")
-
+	page(name: "main")
 }
 
-
-def mainPage() {
-	dynamicPage(name: "mainPage", title: "", install: true, uninstall: true, submitOnChange: true) {
+def main(){
+	init(1) 	// during first time install of child, along with installCheck(), pre-populate any un-initialized elements 
+	dynamicPage(name: "main", title: "", uninstall: true, install: true){
+		updateMyLabel()
 		displayHeader()
-		state.appInstalled = app.getInstallationState() 
-		if (state.appInstalled != 'COMPLETE') return installCheck()
+		state.appInstalled = app.getInstallationState() // validate that the Done button has been clicked the first time
+		if (state.appInstalled != 'COMPLETE') return installCheck() 
 
-		section() {
-      	      app (name: "sprinklerTimetable",
-      	           appName: "Sprinkler Valve Timetable",
-      	           namespace: "csteele",
-      	           title: "Create New Sprinkler Schedule",
-      	           multiple: true)
-		}
+      	section(menuHeader("General")) {
+			label title: "<b>Name for this application</b>", required: false, submitOnChange: true
+			if (!app.label) {
+				app.updateLabel(app.name)
+				atomicState.appDisplayName = app.name
+			}
+			if (app.label.contains('<span ')) {
+				if (atomicState?.appDisplayName != null) {
+					app.updateLabel(atomicState.appDisplayName)
+				} else {
+					String myLabel = app.label.substring(0, app.label.indexOf('<span '))
+					atomicState.appDisplayName = myLabel
+					app.updateLabel(myLabel)
+				}				
+			}
 	
-		section() {
-		  	input "advancedOption", "bool", title: "Display Options that become common to all Sprinkler Valve Timetables.", required: false, defaultValue: false, submitOnChange: true
-			input name: "quickref", type: "hidden", title:"<a href='https://www.hubitatcommunity.com/QuikRef/sprinklerScheduleManagerInfo/index.html' target='_blank'>Quick Reference ${version()}</a>"
+			paragraph ""
+				enaDis = atomicState.paused ? "Disabled" : "Enabled" 
+				input "schEnable", "bool", title: "Schedule $enaDis", required: false, defaultValue: true, submitOnChange: true
+				atomicState.paused = schEnable ? false : true
+
+			paragraph "\n<b>Valve Select</b>"
+			input "valves",
+      	        "capability.valve",
+      	        title: "Control which valves?",
+      	        multiple: true,
+      	        required: false,
+      	        submitOnChange: true
+	
+      	}
+	
+		section(menuHeader("Timetable Status & Logging")) {
+			if (valves) {
+				currentMonth = new Date().format("M") 	// Get the current month as a number (1-12)
+				currentMonthPercentage = state.month2month ? state.month2month[currentMonth].toDouble() : 1  // Lookup the percent in month2month or 1 
+			 // provide some feedback on which valves are On
+			 	String str = "<div style='background-color: rgba(73, 163, 125, 0.3);'>"	
+				if (state.month2month) {
+					str += "<b>Adjust valve timing</b> by Month is active. Current month is: <b>$currentMonthPercentage%</b><br>" +
+					"<b>Rain hold</b> is $state.rainHold<br>"
+				}
+				if (state.overTempToday) { str += "Sometime today, the outside temperature exceeded the limit you set of $state.maxOutdoorTemp.<br>" }
+				str += valves?.collect { dev -> "<b>${dev.label ?: dev.name}</b> is ${dev.currentValue('valve', true) == 'open' ? 'On' : 'Off'}"}?.join(', ') ?: ""
+				str += "</div>"
+				paragraph str
+			}
+
+			input "infoEnable", "bool",
+				title: "Enable activity logging",
+				required: false,
+				defaultValue: true, width: 2
+			input "debugEnable", "bool",
+				title: "Enable debug logging", 
+				required: false,
+				defaultValue: false,
+				submitOnChange: true, width: 2
+			
+			if (debugEnable) {
+				input "debugTimeout", "enum", required: false, defaultValue: "0", title: "Automatic debug Log Disable Timeout?", width: 3,  \
+				    	options: [ "0":"None", "1800":"30 Minutes", "3600":"60 Minutes", "86400":"1 Day" ]
+			}
 		}
-		if (advancedOption) {
-			  section(menuHeader("Advanced Options Page"))
-			  {
-			  	href "advancedPage", title: "Advanced Options", required: false
-			  }
-			  // Send the current Maps to each Child, exactly like an Update-from-Done would do.
-			  childApps.each {child ->
-			  	child.set2Month(state.month2month) 
-			  	child.set2DayGroup(state.dayGroup) 
-				child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp)
-				child.setOutdoorRain(outdoorRainDevice, state.currentRainAttribute) 
-			  }
+		
+		if (valves) {
+			section(menuHeader("Schedule")) {
+		
+				paragraph "<b>Select Days into Groups</b>"
+				paragraph displayDayGroups()		// display day-of-week groups - Section I
+	
+				paragraph "<b>Select Period Settings by Group</b>"
+				paragraph displayTable()		// display groups for scheduling - Section II
+				  displayDuration()
+				  displayStartTime()
+		
+				paragraph "<b>Select Valves into Day Groups</b>"
+				paragraph displayGrpSched()		// display mapping of Valve to DayGroup - Section III
+				  selectDayGroup()
+			
+				input "rainEnable", "bool",
+					title: "<b>Enable Rain Hold</b> for this entire Timetable", 
+					required: false,
+					defaultValue: false,
+					submitOnChange: false
+
+				paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
+		    }
 		}
 	}
 }
@@ -114,80 +176,27 @@ def mainPage() {
 
 /*
 -----------------------------------------------------------------------------
-Advanced Page handlers
+Main Page handlers
 -----------------------------------------------------------------------------
 */
 
-def advancedPage() {
-	def subTitle = getFormat("title", "Sprinkler Schedules")
-	dynamicPage(name: "advancedPage", title: subTitle, uninstall: false, install: false) {
-		displaySubHeader()
-		section(menuHeader("<b>Master: Adjust valve timing by Month</b>"))
-		{
-			paragraph displayMonths()		// display Monthly percentages
-			  editMonths()
-		}
-		section(menuHeader("<b>Master: Select Days into Groups</b>"))
-		{
-			paragraph "<i>Groups defined here will appear as un-editable groups in every Timetable (child). </i>"
-			paragraph displayDayGroups()		// display day-of-week groups
-		}
-		section(menuHeader("<b>Master: Select Temperature Device</b>"))
-		{
-			paragraph "<i>Choose a temperature device and set the maximum value. Timetables can be conditional on the temperature exceeding the maximum.</i>"
-			  selectTemperatureDevice()		// are there days that are very hot ?
-		}
-		section(menuHeader("<b>Master: Select Rain detection Device</b>"))
-		{
-			paragraph "<i>Choose a Water Sensor device that will supply rain data. Timetables can be conditional on the rain values.</i>"
-			  selectRainDevice()		// are there days that are wet enough ?
-		}
-	}
-}
-
-
-String displayMonths() {	// display Monthly percentages
-	if(state.month2month == null) state.month2month = ["1":"100", "2":"100", "3":"100", "4":"100", "5":"100", "6":"100", "7":"100", "8":"100", "9":"100", "10":"100", "11":"100", "12":"100"]
-	
-	String str = "<i>Assume that Valve Timing is 100% and adjust that timing by the percentages, monthly. Valve Duration is reduced to the percentage defined for the month in which it runs.<br>"
-	str += "Example: If a Valve is set to be 15 minutes, and the current month has a value of 30%, the valve will run for 5 minutes each day of the month.</i><p>"
-	str += "<style>.mdl-data-table tbody tr:hover{background-color:inherit} .tstat-col td,.tstat-col th { padding:8px 8px;text-align:center;font-size:12px} .tstat-col td {font-size:15px }" +
-		"</style><div style='overflow-x:auto'><table class='mdl-data-table tstat-col' style=';border:2px solid black'>" +
-		"<thead><tr style='border-bottom:2px solid black'>" +
-		"<th>Jan</th>" +
-		"<th>Feb</th>" +
-		"<th>Mar</th>" +
-		"<th>Apr</th>" +
-		"<th>May</th>" +
-		"<th>Jun</th>" +
-		"<th>Jul</th>" +
-		"<th>Aug</th>" +
-		"<th>Sep</th>" +
-		"<th>Oct</th>" +
-		"<th>Nov</th>" +
-		"<th>Dec</th>" +
-		"</tr></thead>"
-
-	str += "<tr style='color:black'border = 1>" 
-	state.month2month.keySet().sort { it.toInteger() }.each { key ->
-		String mCol = buttonLink("m${key}", "${state.month2month[key]}", "purple")
-		str += "<th>$mCol</th>"
-	}
-	str += "</tr></table></div>"
-	str
-}
-
-
-String displayDayGroups() {	// display day-of-week groups
-	if(state.dayGroup == null) state.dayGroup = ['1': ['1':true, '2':true, '3':true, '4':true, '5':true, '6':true, '7':true, "s": "P", "name": "", "ot": false, "ra": false, "duraTime": null, "startTime": null ] ] // initial row
-	if(state.dayGroupBtn) {
-		String dgK = state.dayGroupBtn.substring(0, 1); // dayGroupBtn Key (row)
-		String dgI = state.dayGroupBtn.substring(1);   // dayGroupBtn value (mon-sun)
-
-		state.dayGroup."$dgK"."$dgI" = state.dayGroup."$dgK"."$dgI" ? false : true // toggle the state.
+String displayDayGroups() {	// display day-of-week groups - Section I
+	incM = state.dayGroupMaster?.size() ?: 0
+	if(state.dayGroupBtn) {		// toggle the daily checkmarks 
+		dgK = state.dayGroupBtn[0].toInteger() - incM // dayGroupBtn Key
+		dgI = state.dayGroupBtn.substring(1);   // dayGroupBtn value (mon-sun)
+		state.dayGroup["$dgK"]["$dgI"] = !state.dayGroup["$dgK"]["$dgI"] // Toggle state
 		state.remove("dayGroupBtn") // only once 
+		logDebug "displayDayGroups Item: $dgK.$dgI"
+	}
+	if(state.overTempBtn) {		// toggle the overTemp checkmarks 
+		dgK = state.overTempBtn[0].toInteger() - incM // overTempBtn Key
+       	if (state.dayGroup.containsKey(dgK.toString())) { state.dayGroup[dgK.toString()].ot = !state.dayGroup[dgK.toString()].ot } // Toggle state
+		state.remove("overTempBtn") // only once 
 	}
 
+	masterGroupMerge()	// merge or riffle merge if there's a new mMap from Parent.
+	
 	String str = "<script src='https://code.iconify.design/iconify-icon/1.0.0/iconify-icon.min.js'></script>"
 	str += "<style>.mdl-data-table tbody tr:hover{background-color:inherit} .tstat-col td,.tstat-col th { padding:8px 8px;text-align:center;font-size:12px} .tstat-col td {font-size:15px }" +
 		"</style><div style='overflow-x:auto'><table class='mdl-data-table tstat-col' style=';border:2px solid black'>" +
@@ -200,7 +209,7 @@ String displayDayGroups() {	// display day-of-week groups
 		"<th>Fri</th>" +
 		"<th>Sat</th>" +
 		"<th>Sun</th>" +
-		"<th>&nbsp;&nbsp;</th>" +
+		"<th colspan=2 style='color:#db7321;'>OverTemp</th>" +
 		"</tr></thead>"
 
 	str += "<tr style='color:black'border = 1>" 
@@ -208,77 +217,120 @@ String displayDayGroups() {	// display day-of-week groups
 	String O = "<i class='he-checkbox-unchecked'></i>"
 	String Plus = "<i class='ic--sharp-plus'>+</i>"
 	String Minus = "<i class='trashcan'>-</i>"
-	String addDayGroupBtn = buttonLink("addDGBtn", Plus, "#49a37d", "")
+	String addDayGroupBtn = buttonLink("addDGBtn", Plus, "#1A77C9", "")
 
 	strRows = ""
+	rowCount = 1
+
+	state.dayGroupMaster.each {
+	     k, dg -> 
+	        str += strRows
+	        str += "<th>$rowCount</th>"
+	        for (int r = 1; r < 8; r++) { 
+			String dayBoxN = noButtonLink("w$rowCount$r", O, "#49a37d", "")
+			String dayBoxY = noButtonLink("w$rowCount$r", X,   "#49a37d", "")
+	        	str += (dg."$r") ? "<th>$dayBoxY</th>" : "<th>$dayBoxN</th>" 
+	        }
+	        // no delete button on Master dayGroup rows.
+		  str += "<th colspan=2>&nbsp;</th>"
+		  strRows = "</tr><tr>" 
+		  rowCount++
+	}
 	state.dayGroup.each {
 	     k, dg -> 
 	        str += strRows
-	        str += "<th>$k</th>"
+	        str += "<th>$rowCount</th>"
 	        for (int r = 1; r < 8; r++) { 
-			String dayBoxN = buttonLink("w$k$r", O, "#49a37d", "")
-			String dayBoxY = buttonLink("w$k$r", X,   "#49a37d", "")
+			String dayBoxN = buttonLink("w$rowCount$r", O, "#1A77C9", "")
+			String dayBoxY = buttonLink("w$rowCount$r", X,   "#1A77C9", "")
 	        	str += (dg."$r") ? "<th>$dayBoxY</th>" : "<th>$dayBoxN</th>" 
 	        }
-		  String remDayGroupBtn = buttonLink("rem$k", "<i style=\"font-size:1.125rem\" class=\"material-icons he-bin\"></i>", "#49a37d", "")
+		  String remDayGroupBtn = buttonLink("rem$rowCount", "<i style=\"font-size:1.125rem\" class=\"material-icons he-bin\"></i>", "#1A77C9", "")
 		  str += "<th>$remDayGroupBtn</th>"
+		  String otBoxN = buttonLink("o$rowCount", O, "#db7321", "")
+		  String otBoxY = buttonLink("o$rowCount", X,   "#db7321", "")
+	        str += (dg."ot") ? "<th>$otBoxY</th>" : "<th>$otBoxN</th>" 
 		  strRows = "</tr><tr>" 
+		  rowCount++
 	}
 	str += "</tr><tr>"
-	str += "<th>$addDayGroupBtn</th><th colspan=4> <- Add new Day Group</th>"
+	str += "<th>$addDayGroupBtn</th><th colspan=4> <- Add new Day Group</th><th colspan=5>&nbsp;</th>"
 	str += "</tr></table></div>"
 	str
 }
 
-def selectTemperatureDevice() {
 
-	paragraph "\n<b>Temperature Device Select</b>"
-			input "outdoorTempDevice", "capability.temperatureMeasurement",
-      	        title: "Select which device?",
-      	        multiple: false,
-      	        required: false,
-      	        submitOnChange: true
+String displayTable() { 	// display groups for scheduling - Section II
+	if (state.eraseTime) { // if the reset/erase button is clicked
+		def eraseTime = state.eraseTime as Integer // which button (row) was clicked
+		def masterSize = state.dayGroupMaster.size()
+		def offset = (masterSize >= eraseTime) 
+		def nIndex = (offset) ? eraseTime.toString() : (eraseTime - masterSize).toString()
+			if (offset) {
+			    if (state.dayGroupMaster.containsKey(nIndex)) { state.dayGroupMaster[nIndex].startTime = 0 }
+			    if (state.dayGroupMaster.containsKey(nIndex)) { state.dayGroupMaster[nIndex].duraTime = 0 }
+			} else {
+			    if (state.dayGroup.containsKey(nIndex)) { state.dayGroup[nIndex].startTime = 0 }
+			    if (state.dayGroup.containsKey(nIndex)) { state.dayGroup[nIndex].duraTime = 0 }
+			}
+		state.remove("eraseTime")
+		app.removeSetting("eraseTime")
+		paragraph "<script>{changeSubmit(this)}</script>"
+	}
 
-	paragraph "\n<b>Maximum Temperature</b>"
-			input "maxOutdoorTemp", "number",
-      	        title: "<i>Enter the Maximum temperature beyond which conditional Timetables will be skipped.</i>",
-      	        defaultValue: maxOutdoorTemp,
-      	        multiple: false,
-      	        required: false,
-      	        submitOnChange: true
+	String str = "<script src='https://code.iconify.design/iconify-icon/1.0.0/iconify-icon.min.js'></script>"
+	str += "<style>.mdl-data-table tbody tr:hover{background-color:inherit} .tstat-col td,.tstat-col th { padding:8px 8px;text-align:center;font-size:12px} .tstat-col td {font-size:15px }" +
+		"</style><div style='overflow-x:auto'><table class='mdl-data-table tstat-col' style=';border:2px solid black'>" +
+		"<thead><tr style='border-bottom:2px solid black'>" +
+		"<th style='border-right:2px solid black'>Day Group</th>" +
+		"<th>Start Time</th>" +
+		"<th>Duration</th>" +
+		"<th>Reset</th>" +
+		"</tr></thead>"
+
+	state.dayGroupMerge.each {
+	     k, dg -> 
+		  String dayGroupNamed = "Group $k"
+		  String sTime    = state.dayGroupMerge[k]?.startTime ? buttonLink("t$k", state.dayGroupMerge[k].startTime, "black") : buttonLink("t$k", "Set Time", "green")
+		  String dTime    = state.dayGroupMerge[k]?.duraTime 
+		  String duraTime = dTime ?  buttonLink("n$k", dTime, "purple") : buttonLink("n$k", "Select", "green")
+		  String devLink  = "<a href='/device/edit/$k' target='_blank' title='Open Device Page for $dev'>$dev"
+		  String reset    = buttonLink("x$k", "<iconify-icon icon='bx:reset'></iconify-icon>", "black", "20px")
+		  str += "<tr style='color:black'>" +
+		  	"<td style='border-right:2px solid black'>$dayGroupNamed</td>" +
+		  	"<td>$sTime</td>" +
+		  	"<td>$duraTime</td>" + 
+		  	"<td title='Reset $k' style='padding:0px 0px'>$reset</td>" +
+		  	"</tr>"
+	}  
+	str += "</table></div>"
+	str
 }
 
 
-def selectRainDevice() {
+String displayGrpSched() {	// display mapping of Valve to DayGroup - Section III
+	String str = "<script src='https://code.iconify.design/iconify-icon/1.0.0/iconify-icon.min.js'></script>"
+	str += "<style>.mdl-data-table tbody tr:hover{background-color:inherit} .tstat-col td,.tstat-col th { padding:8px 8px;text-align:center;font-size:12px} .tstat-col td {font-size:15px }" +
+		"</style><div style='overflow-x:auto'><table class='mdl-data-table tstat-col' style=';border:2px solid black'>" +
+		"<thead><tr style='border-bottom:2px solid black'>" +
+		"<th style='border-right:2px solid black'>Valve</th>" +
+		"<th>Day Group</th>" +
+		"</tr></thead>"
 
-	paragraph "\n<b>Rain Device Selection</b>"
-			input "outdoorRainDevice", "capability.waterSensor",
-      	        title: "Select which device?",
-      	        multiple: false,
-      	        required: false,
-      	        submitOnChange: true
-
-	if (outdoorRainDevice) {
-		def vars = [:]
-		def c1=1
-		atts = outdoorRainDevice?.supportedAttributes.toSet().sort { it?.toString()?.toLowerCase() }
-		atts.each { v ->
-			vars[c1++] = "$v"
-		}
-
-		attributeList = vars
-		paragraph "\n<b>Rain Attribute</b>"
-			input "selectRainAttribute", "enum", options: attributeList,
-			  title: "<i>Which Attribute indicates there was enough rain to skip a cycle?</i>",
-			  defaultValue: selectRainAttribute,
-			  multiple: false,
-			  required: false,
-			  submitOnChange: true
-
-		state.currentRainAttribute = attributeList[selectRainAttribute as Integer]
-	}	
+	valves?.sort{it.displayName.toLowerCase()}.each {
+	     dev ->
+		  dx = state.valves[dev.id].dayGroupMerge
+		  String devLink = "<a href='/device/edit/$dev.id' target='_blank' title='Open Device Page for $dev'>$dev"
+		  String myDG = state.valves[dev.id].dayGroup
+		  String myDayGroup = myDG ? buttonLink("r$dev.id", myDG, "purple") : buttonLink("r$dev.id", "Select", "green")
+		  str += "<tr style='color:black'>" +
+		  	"<td style='border-right:2px solid black'>$devLink</td>" +
+			"<td title='${myDG ? "Deselect $myDG" : "Select String Hub Variable"}'>$myDayGroup</td></tr>"
+		  	"</tr>"
+	}  
+	str += "</table></div>"
+	str
 }
-
 
 /*
 -----------------------------------------------------------------------------
@@ -286,13 +338,58 @@ Display level handlers
 -----------------------------------------------------------------------------
 */
 
-def editMonths() {
-	if (state.dispMonthBtn) {
-		input "monthPercentage", "decimal", title: "Monthly Percentage", submitOnChange: true, width: 4, range: "1..100", defaultValue: state.month2month[state.dispMonthBtn], newLineAfter: true
-		if(monthPercentage) {
-			state.month2month[state.dispMonthBtn] = monthPercentage
-			state.remove("dispMonthBtn")
-			app.removeSetting("monthPercentage")
+def displayStartTime() {
+ 	if(state.startTimeBtn) {
+		def startTimeBtn = state.startTimeBtn as Integer
+		def masterSize = state.dayGroupMaster.size()
+		def offset = (masterSize >= startTimeBtn) 
+		def nIndex = (offset) ? startTimeBtn.toString() : (startTimeBtn - masterSize).toString()
+		input "StartTime", "time",   title: "At This Time", submitOnChange: true, width: 4, defaultValue: state.startTime, newLineAfter: false
+		input "DoneTime$state.startTimeBtn",  "button", title: "  Done with time  ", width: 2, newLineAfter: true
+		if(StartTime) {
+			if (offset) {
+			    if (state.dayGroupMaster.containsKey(nIndex)) { state.dayGroupMaster[nIndex].startTime = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSX", StartTime).format('HH:mm') }
+			} else {
+			    if (state.dayGroup.containsKey(nIndex)) { state.dayGroup[nIndex].startTime = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSX", StartTime).format('HH:mm') }
+			}
+			state.remove("startTimeBtn")
+			app.removeSetting("StartTime")
+			paragraph "<script>{changeSubmit(this)}</script>"
+		}
+	}
+}
+
+
+def displayDuration() {
+ 	if(state.duraTimeBtn) {
+		def duraTimeBtn = state.duraTimeBtn as Integer
+		def masterSize = state.dayGroupMaster.size()
+		def offset = (masterSize >= duraTimeBtn) 
+		def nIndex = (offset) ? duraTimeBtn.toString() : (duraTimeBtn - masterSize).toString()
+		input "DuraTime", "decimal", title: "Sprinkler Duration", submitOnChange: true, width: 4, range: "0..60", defaultValue: state.duraTimeBtn, newLineAfter: true
+		if(DuraTime) {
+			if (offset) {
+			    if (state.dayGroupMaster.containsKey(nIndex)) { state.dayGroupMaster[nIndex].duraTime = DuraTime }
+			} else {
+			    if (state.dayGroup.containsKey(nIndex)) { state.dayGroup[nIndex].duraTime = DuraTime }
+			}
+			state.remove("duraTimeBtn")
+			app.removeSetting("DuraTime")
+			paragraph "<script>{changeSubmit(this)}</script>"
+		}
+	}
+}
+
+
+def selectDayGroup() { // map valve to dayGroup
+ 	if(state.dayGrpBtn) {
+		List vars = state.dayGroupMerge.keySet().collect() 
+
+		input "DayGroup", "enum", title: "Sprinkler Group", submitOnChange: true, width: 4, options: vars, newLineAfter: true, multiple: true
+		if(DayGroup) {
+			state.valves[state.dayGrpBtn].dayGroup = DayGroup
+			state.remove("dayGrpBtn")
+			app.removeSetting("DayGroup")
 			paragraph "<script>{changeSubmit(this)}</script>"
 		}
 	}
@@ -308,15 +405,17 @@ def addDayGroup(evt = null) {
     def dayGroupSize = state.dayGroup.size() // More efficient
     def newIndex = (dayGroupSize + 1).toString() // Ensures key consistency
 
+    logDebug "Adding another dayGroup map: $newIndex"
     state.dayGroup[newIndex] = dayGroupTemplate.clone() // Clone to avoid reference issues
 }
 
 
 def remDayGroup(evt = null) {  	// remove a Local dayGroup & dayGroupSettings
-	dayGroupSize = (state.dayGroup ?: [:]).keySet().size()
+	dayGroupSize = (state.dayGroupMerge ?: [:]).keySet().size()
 	if (dayGroupSize > 1) {
 		// Determine the key to delete
 		keyToDelete = (evt.toInteger() - (state.dayGroupMaster ?: [:]).size()).toString()		
+		logDebug "remove another dayGroup map: $dayGroupSize, $keyToDelete, evt:$evt"
 		if (state.dayGroup.containsKey(keyToDelete)) { state.dayGroup.remove(keyToDelete) } 
 		// Re-map keys to be sequential
 		def dayGrpReOrder = [:]
@@ -330,108 +429,459 @@ def remDayGroup(evt = null) {  	// remove a Local dayGroup & dayGroupSettings
 }
 
 
+def masterGroupMerge(masterDayGroupIn = [:]) { // lots of deep copies of hashMaps
+	// three part merge. Part 1: Decide which incoming "Master" is to be used and clone the days-of-week fields.
+	def dayGroupMaster = [:]
+	state.dayGroupMaster.each { k, v ->
+ 		dayGroupMaster[k] = v.clone() // deep copy
+	}
+ 	def dayGroupMerge = masterDayGroupIn ? masterDayGroupIn.collectEntries { k, v -> [k, v.clone()] }  : dayGroupMaster.collectEntries { k, v -> [k, v.clone()] }  ?: [:] // deep copy
+
+	//  Part 2: overwrite setTime, DuraTime, name, ot and ra values from the child for the Master records. 
+	if (masterDayGroupIn) {
+		dayGroupMerge.each { k, v -> 
+			if (state.dayGroupMaster.containsKey(k)) {
+      	          def masterEntry = state.dayGroupMaster[k]
+      	          v.startTime = masterEntry?.startTime ?: null
+      	          v.duraTime = masterEntry?.duraTime ?: null
+      	          v.name = masterEntry?.name ?: ""
+      	          v.ot = masterEntry?.ot ?: false
+      	          v.ra = masterEntry?.ra ?: false
+      	      }
+		}
+		dayGroupMerge.each { k, v ->
+			state.dayGroupMaster[k] = v.clone() // deep copy this new master for next pass.
+		}
+	}
+
+	//  Part 3: independent of masterDayGroupIn vs state.dayGroupMaster, all the child dayGroup rows are cloned & keys renumbered.
+	dayGroupSize = (dayGroupMerge ?: [:]).keySet().size()		// renumber, starting with the size of dayGroupMerge
+	state.dayGroup.each { k, v -> // merge dayGroup into 
+		dayGroupSize++
+		dayGroupMerge[dayGroupSize] = v.clone() // deep copy
+	}
+
+	// then clone it for the next pass.
+	state.dayGroupMerge = dayGroupMerge.collectEntries { k, v -> [k, v.clone()] } // deep copy
+}
+
+
+String buttonLink(String btnName, String linkText, color = "#1A77C9", font = "15px") {
+	"<div class='form-group'><input type='hidden' name='${btnName}.type' value='button'></div><div><div class='submitOnChange' onclick='buttonClick(this)' style='color:$color;cursor:pointer;font-size:$font'>$linkText</div></div><input type='hidden' name='settings[$btnName]' value=''>"
+}
+String noButtonLink(String btnName, String linkText, color = "#1A77C9", font = "15px") {
+	"<div class='form-group'></div><div><div style='color:$color;font-size:$font'>$linkText</div></div>"
+}
+
+void appButtonHandler(btn) {
+	// only one button can be pressed, remove their states, since "btn" contains the only valid one.
+	state.remove("duraTimeBtn") 
+	state.remove("dayGrpBtn")
+	state.remove("startTimeBtn")
+	state.remove("dayGroupBtn")
+	state.remove("overTempBtn")
+	state.remove("doneTime")
+	state.remove("eraseTime")
+		app.removeSetting("StartTime") 
+		app.removeSetting("DuraTime") 
+
+	if      ( btn == "btnSchEna")           toggleEnaSchBtn()
+	else if ( btn == "addDGBtn")            addDayGroup()
+	else if ( btn.startsWith("rem")      )  remDayGroup(btn.minus("rem")) 
+	else if ( btn.startsWith("n")        )  state.duraTimeBtn = btn.minus("n")
+	else if ( btn.startsWith("r")        )  state.dayGrpBtn = btn.minus("r")
+	else if ( btn.startsWith("t")        )  state.startTimeBtn = btn.minus("t")
+	else if ( btn.startsWith("w")        )  state.dayGroupBtn = btn.minus("w")
+	else if ( btn.startsWith("o")        )  state.overTempBtn = btn.minus("o")
+	else if ( btn.startsWith("x")        )  state.eraseTime = btn.minus("x")
+
+}
+
+
+/*
+-------------------------------------------------------------------------------------------
+
+---  UI code above here, Generic App code below.  Background Valve code further below.  ---
+
+-------------------------------------------------------------------------------------------
+*/
 /*
 -----------------------------------------------------------------------------
-Standard Hubitat App methods
+Logging output
 -----------------------------------------------------------------------------
 */
 
+def logDebug(msg) {
+	if (settings.debugEnable) { log.debug msg }
+}
+
+def logWarn(msg) { 
+	log.warn msg
+}
+
+def logInfo(msg) {
+    if (settings.infoEnable) { log.info msg }
+}
+
+
+/*
+-----------------------------------------------------------------------------
+Standard handlers, and mode-change handler
+-----------------------------------------------------------------------------
+*/
+
+def initialize() {		// unused?
+	logDebug "initialize()"
+	unsubscribe()
+	init()
+	update()
+}
+
+
 def installed() {
-	logInfo "Installed with settings."//": ${settings}"
-	initialize()
+	logDebug "installed()"
+	parent?.componentInitialize(this.device)
 }
 
 
 def updated() {
-	logInfo "Updated with settings."//": ${settings}"
-	childApps.each {child ->
-		child.set2Month(state.month2month) 
-		child.set2DayGroup(state.dayGroup) 
-		child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) 
-		child.setOutdoorRain(outdoorRainDevice, state.currentRainAttribute) 
+	logDebug "updated()"
+	unschedule (logsOff)
+	if (debugEnable && debugTimeout.toInteger() >0) runIn(debugTimeout.toInteger(), logsOff)
+	update()
+}
+
+
+def update() {
+	updateMyLabel()
+	scheduleNext()
+}
+
+
+def uninstalled() {
+	logDebug "uninstalled()"
+}
+
+
+def set2Month(monthIn) { 
+	state.month2month = monthIn
+	logInfo "MonthIn update from Parent."
+}
+
+
+def set2DayGroup(dayGroupIn) { 
+	masterGroupMerge(dayGroupIn)
+	logInfo "DayGroup update from Parent."
+}
+
+def setOutdoorTemp(aTempDevice, dTemp) {
+	state.outdoorTempDevice = aTempDevice.currentStates
+	state.maxOutdoorTemp = dTemp
+	def tempNow = aTempDevice.currentValue("temperature")
+	state.overTempToday = ( tempNow > state.maxOutdoorTemp.toInteger() ) ? true : false
+	logInfo "OutdoorTemp update from Parent, tempNow: $tempNow." 
+	unsubscribe(recvOutdoorTempHandler)
+	subscribe(aTempDevice, "temperature", recvOutdoorTempHandler)
+}
+
+
+def setOutdoorRain(aRainDevice, rainAttr) {
+	state.outdoorRainDevice = aRainDevice.currentStates
+	state.rainAttribute = rainAttr
+	def rainNow = aRainDevice.currentValue(rainAttr)
+	state.rainHold = aRainDevice.currentValue(rainAttr) == "wet" ? true : false
+	logInfo "OutdoorRain update from Parent, rainNow: $rainNow." 
+	unsubscribe(recvOutdoorRainHandler)
+	subscribe(aRainDevice, rainAttr, recvOutdoorRainHandler)
+}
+
+
+def recvOutdoorTempHandler(evt) {
+	if (!state.overTempToday) { 	// if the temp goes over the limit, latch 'true' state til midnight reset
+		state.overTempToday = new BigDecimal(evt.value) > new BigDecimal(state.maxOutdoorTemp) //  true : false 
+		logDebug "OutdoorTemp update from Device. overTempToday: $state.overTempToday"
 	}
 }
 
 
-def initialize() {
-	// nothing needed here, since the child apps will handle preferences/subscriptions
-	// this just logs some messages for demo/information purposes
-	logInfo "there are ${childApps.size()} child smartapps"
-	childApps.each {child ->
-		logInfo "child app: ${child.label}"
-	}
-}
-
-
-/*
------------------------------------------------------------------------------
-Helper/Handler functions
------------------------------------------------------------------------------
-*/
-
-// called by each child when it wants an update of these values.
-def componentInitialize(cd) { 
-	if (!advancedOption) return
-
-	cd.set2Month(state.month2month) 
-	cd.set2DayGroup(state.dayGroup) 
-	cd.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) 
-	cd.setOutdoorRain(outdoorRainDevice, state.currentRainAttribute) 
+def recvOutdoorRainHandler(evt) {
+	state.rainHold = evt.value == "wet" ? true : false
+	logDebug "OutdoorRain update from Device. rainHold: $state.rainHold"
 }
 
 
 def installCheck(){         
 	state.appInstalled = app.getInstallationState() 
 	if(state.appInstalled != 'COMPLETE'){
-		section{paragraph "Please hit 'Done' to install '${app.label}'"}
+		section{paragraph "Please hit 'Done' to Complete the install."}
 	}
 	else{
-		logInfo "$app.name is Installed Correctly"
+		logDebug "$app.name is Installed Correctly"
 	}
 }
 
 
-def logDebug(msg) { // allows either log.debug or logDebug like the Child code.
-	log.debug msg
+def init(why) {
+	switch(why) {            
+		case 1: 
+			if(state.valves == null) state.valves = [:] 
+			if(atomicState.paused == null) atomicState.paused = true // the switch visually is inverted from the logic. Default = true aka enabled/not paused.
+			if(state.inCycle == null) state.inCycle = false
+			if(state.overTempToday == null) state.overTempToday = false 
+			if(state.rainHold == null) state.rainHold = false
+			if(state.dayGroup == null) state.dayGroup = ['1': ['1':true, '2':true, '3':true, '4':true, '5':true, '6':true, '7':true, "s": "P", "name": "", "ot": false, "ra": false, "duraTime": null, "startTime": null ] ] // initial row
+
+			if(state.month2month == null) state.month2month = [:]
+			if(state.dayGroupMaster == null) state.dayGroupMaster = [:]
+			settings.valves.each { dev -> if(!state.valves["$dev.id"]) { state.valves["$dev.id"] = ['dayGroup':['1']] } } 
+			break; 
+	}
 }
 
-def logInfo(msg) { // allows either log.info or logInfo like the Child code.
-	log.info msg
+
+/*
+-------------------------------------------------------------------------------------------
+
+---  Generic App code above here, Background Valve on/off code below.  --------------------
+
+-------------------------------------------------------------------------------------------
+*/
+/*
+-----------------------------------------------------------------------------
+   Whenever there is a Timetable change/update
+-----------------------------------------------------------------------------
+*/
+
+def reschedule() {		// midnight run to setup first schedule of the day.
+	unschedule(reschedule)
+	schedule('7 7 0 ? * *', reschedule) // reschedule the midnight run to schedule that day's work.
+	state.overTempToday = false // once a day, midnight, reset the over temp indicator
+	state.rainHold = false // once a day, midnight, reset the rain indicator
+	runIn(15, scheduleNext)
 }
 
-def getFormat(type, myText=""){            // Modified from @Stephack Code
+
+def scheduleNext() {
+	hasZero = state.dayGroupMerge.any { key, value -> value.any { it.value.toString() == "0" } } || state.valves?.isEmpty()
+	if (hasZero) {
+		logWarn "Please set Time and Duration"
+		return
+	}
+	
+	unschedule(reschedule)
+	schedule('7 7 0 ? * *', reschedule) // reschedule the midnight run to schedule that day's work.
+
+	logInfo "Checking $app.label Schedule."
+	Calendar calendar = Calendar.getInstance();
+	def cronDay = calendar.get(Calendar.DAY_OF_WEEK);
+
+	timings = buildTimings(cronDay)
+	if (!timings) {
+		logWarn "Nothing scheduled for $app.label Today."
+		return
+	}
+
+	if (state.rainHold && rainEnable) {
+		logWarn "Rain Hold - schedule skipped for $app.label Today."
+		return
+	}
+
+	Date date = new Date()
+	String akaNow = date.format("HH:mm")
+		
+	hasSched = false
+	for (timN in timings) {
+	    sk = timN.key			// index into dayGroupMerge for Duration
+	    (sth, stm) = timN.startTime.split(':')
+	    if (akaNow.replace(':', '') > timN.startTime.replace(':', '')) continue
+	    hasSched = true
+	    break;	// quit the for loop on a schedule of first startTime that's in the future.
+	}
+	logDebug "schedule('0 $stm $sth ? * *', schedHandler, [data: ['dKey': $sk]]), hasSched: $hasSched"
+	if (hasSched) { 
+		schedule("0 ${stm} ${sth} ? * *", schedHandler, [data: ["dKey":"$sk"]]) 
+		logInfo "$app.label scheduled today."
+	}
+	else {
+		logInfo "Nothing scheduled for $app.label today."
+	}
+}
+
+
+/*
+-----------------------------------------------------------------------------
+   Schedule Helper/Handler functions
+-----------------------------------------------------------------------------
+*/
+
+def schedHandler(data) {
+	unschedule(schedHandler)	// don't repeat this day after day.
+	logInfo "Running $app.name Schedule."
+	cd = data["dKey"] as String
+	duraT = state.dayGroupMerge."$cd".duraTime
+
+	// if the schedule to be run is an 'ot' (overTemp) and today doesn't have an overTemp, then skip
+	if(state.dayGroupMerge[cd].ot && !state.overTempToday) {
+		logInfo "No Over Temperature today, skipping."
+		runIn(60, scheduleNext)			// find and then schedule the next startTime for today
+		return
+	}
+	
+	if (duraT == 0) {
+		logInfo "Duration of 0, skipping."
+		runIn(60, scheduleNext)			// find and then schedule the next startTime for today
+		return	
+	}
+
+	valve2start = state.valves.findAll { it.value.dayGroup.contains(cd) }.keySet()
+	logDebug "schedHandler: $cd, $state.dayGroupMerge, valve2start: $valve2start" 
+
+	vk = valve2start[0] as String
+	if (vk != null) {
+		valve2start = valve2start.tail()
+	}
+
+   	currentValve = settings.valves?.find{it.id == "$vk"}
+	// some valves need turning on for their duration.
+	currentValve?.open()
+	logInfo "Valve ${currentValve.label ?: currentValve.name} opened."
+	state.inCycle = true
+	atomicState.cycleStart = now()
+	updateMyLabel()
+    
+	duraT = state.dayGroupMerge."$cd".duraTime
+	currentMonth = new Date().format("M") 	// Get the current month as a number (1-12)
+	currentMonthPercentage = state.month2month ? state.month2month[currentMonth].toDouble() / 100 : 1  // Lookup the percent in month2month or 1 
+	dura = 60 * duraT * currentMonthPercentage		// duraTime is in minutes, runIn is in seconds
+	duraSeconds = Math.max(dura.toInteger(), 20) // Ensure minimum valve timing of 20 seconds
+	logDebug "runIn($duraSeconds, scheduleDurationHandler, [vKey: $vk, dS: $duraSeconds, dV: $valve2start])"
+
+ 	runIn(duraSeconds, scheduleDurationHandler, [data: [vKey: "$vk", dS: "$duraSeconds", dV: "$valve2start"]]) 
+}
+
+
+def scheduleDurationHandler(data) {
+	unschedule(scheduleDurationHandler)	// don't repeat this day after day.
+	cd = data.vKey as String
+	duraSeconds = data.dS.toInteger()
+	valve2start = data.dV as String
+	logDebug "schedDurHandler: valveStop: $data.vKey, in Duration: $duraSeconds, next: $valve2start"
+
+   	currentValve = settings.valves?.find{it.id == "$cd"}
+	// stop the valve and start the next, if any.
+	currentValve?.close()
+	logInfo "Valve ${currentValve.label ?: currentValve.name} closed."
+
+	//valves*.close()	// close all the valves
+    
+	// add an interstitial delay to allow the valves to close and recover before opening next.
+	pauseExecution(20000)	// 20 seconds between off and the next on
+
+	if (valve2start != '[]') {
+		valve2start = valve2start.replaceAll(/\[|\]/, '').split(',').collect { it.trim().toInteger() }
+		vk = valve2start[0] as String
+		if (vk != null) {
+			valve2start = valve2start.tail()
+			currentValve = settings.valves?.find{it.id == "$vk"}
+			currentValve?.open()
+			logInfo "Valve ${currentValve.label ?: currentValve.name} opened."
+
+			runIn(duraSeconds, scheduleDurationHandler, [data: [vKey: "$vk", dS: "$duraSeconds", dV: "$valve2start"]])
+		}
+	} else {
+		state.inCycle = false
+		atomicState.cycleEnd = now()
+		runIn(30, scheduleNext)			// find and then schedule the next startTime for today
+		updateMyLabel()
+	}
+}
+
+
+def buildTimings(cronDayOf) {
+	def aWeek = [1:'7', 2:'1', 3:'2', 4:'3', 5:'4', 6:'5', 7:'6']
+	// cronDayOf week is 1-7 where 1 = sunday and 7 = saturday. BUT this app uses 1 as Monday, sunday is 7
+	def result = state.dayGroupMerge.findAll { key, value -> value[aWeek[cronDayOf]] == true }.keySet()
+	// timings = result.collectEntries { key -> [(key): state.dayGrouptimings[key]]
+	def results = result.collect { key -> [key: key, duraTime: state.dayGroupMerge[key]?.duraTime, startTime: state.dayGroupMerge[key]?.startTime]}.findAll { it.startTime != null }.sort { it.startTime } // Sort by startTime
+	// [[key:2, duraTime:5.0, startTime:06:00]]
+}
+
+
+void updateMyLabel() {
+	String flag = '<span '
+	
+	// Display Ecobee connection status as part of the label...
+	String myLabel = atomicState.appDisplayName
+	if ((myLabel == null) || !app.label.startsWith(myLabel)) {
+		myLabel = app.label ?: app.name
+		if (!myLabel.contains(flag)) atomicState.appDisplayName = myLabel
+	} 
+	if (myLabel.contains(flag)) {
+		// strip off any connection status tag
+		myLabel = myLabel.substring(0, myLabel.indexOf(flag))
+		atomicState.appDisplayName = myLabel
+	}
+	String newLabel
+	if (atomicState.isPaused) {
+		newLabel = myLabel + '<span style="color:Crimson"> (paused)</span>'
+	} else if (atomicState.cycleOn) {
+		String beganAt = atomicState.cycleStart ? "started " + fixDateTimeString(atomicState.cycleStart) : 'running'
+		newLabel = myLabel + "<span style=\"color:Green\"> (${beganAt})</span>"
+	} else if ((atomicState.cycleOn != null) && (atomicState.cycleOn == false)) {
+		String endedAt = atomicState.cycleEnd ? "finished " + fixDateTimeString(atomicState.cycleEnd) : 'idle'
+		newLabel = myLabel + "<span style=\"color:Green\"> (${endedAt})</span>"
+	} else {
+		newLabel = myLabel
+	}
+	if (app.label != newLabel) app.updateLabel(newLabel)
+}
+
+
+String fixDateTimeString(eventDate) {
+    def target = new Date(eventDate)
+    def today = new Date().clearTime()
+    def yesterday = new Date(today.time - 1 * 24 * 60 * 60 * 1000) // Subtract 1 day
+    def tomorrow = new Date(today.time + 1 * 24 * 60 * 60 * 1000) // Add 1 day
+
+    String myDate = ''
+    boolean showTime = true
+
+    if (target.clearTime() == today) {
+        myDate = 'today'
+    } else if (target.clearTime() == yesterday) {
+        myDate = 'yesterday'
+    } else if (target.clearTime() == tomorrow) {
+        myDate = 'tomorrow'
+    } else if (target.format('yyyy-MM-dd') == '2035-01-01') { // "Infinity" case
+        myDate = 'a long time from now'
+        showTime = false
+    } else {
+        myDate = "on ${target.format('MM-dd')}"
+    }
+
+    String myTime = showTime ? target.format('h:mma').toLowerCase() : ''
+    return myTime ? "${myDate} at ${myTime}" : myDate
+}
+
+
+def logsOff() {
+	logWarn "debug logging Disabled..."
+	app?.updateSetting("debugEnable",[value:"false",type:"bool"])
+}
+
+
+def sectFormat(type, myText=""){ 
 	if(type == "line") return "<hr style='background-color:#1A77C9; height: 1px; border: 0;'>"
 	if(type == "title") return "<h2 style='color:#1A77C9;font-weight: bold'>${myText}</h2>"
 	if(type == "subTitle") return "<p style='color:#1A77C9;font-weight: bold; font-size: 1.4em;'>${myText}</p>"
 }
 
+
 def displayHeader() {
-	section (getFormat("title", "Sprinkler Schedules")) {
-		paragraph "<div style='color:#1A77C9;text-align:right;font-weight:small;font-size:9px;'>Developed by: C Steele, Matt Hammond <br/>Current Version: ${version()} -  ${thisCopyright}</div>"
+	section (sectFormat("title", "Sprinkler Valve Timetable")) {
+		paragraph "<div style='color:#1A77C9;text-align:right;font-weight:small;font-size:9px;'>Developed by: C Steele, Matt Hammond<br/>Current Version: ${version()} -  ${thisCopyright}</div>"
 		paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
 	}
-}
-
-def displaySubHeader() {
-	section (getFormat("subTitle", "Advanced Options")) {
-		paragraph "<div style='color:#1A77C9;text-align:right;font-weight:small;font-size:9px;'>Developed by: C Steele, Matt Hammond <br/>Current Version: ${version()} -  ${thisCopyright}</div>"
-		paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
-	}
-}
-
-String buttonLink(String btnName, String linkText, color = "#1A77C9", font = "15px") {
-	"<div class='form-group'><input type='hidden' name='${btnName}.type' value='button'></div><div><div class='submitOnChange' onclick='buttonClick(this)' style='color:$color;cursor:pointer;font-size:$font'>$linkText</div></div><input type='hidden' name='settings[$btnName]' value=''>"
-}
-
-
-void appButtonHandler(btn) {
-	state.remove("dispMonthBtn")
-	state.remove("dayGroupBtn")
-	app.removeSetting("monthPercentage") 
-	if ( btn.startsWith("m"))  state.dispMonthBtn = btn.minus("m")
-	else if ( btn == "addDGBtn")            addDayGroup()
-	else if ( btn.startsWith("rem")      )  remDayGroup(btn.minus("rem")) 
-	else if ( btn.startsWith("w")        )  state.dayGroupBtn = btn.minus("w")
 }
 
 
