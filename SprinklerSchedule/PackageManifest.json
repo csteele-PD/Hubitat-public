@@ -15,7 +15,7 @@
       "required": true,
       "oauth": false, 
       "primary": true,
-      "version": "1.0.3"
+      "version": "1.0.4"
     },
     {
       "name": "Sprinkler Valve Timetable",
@@ -26,6 +26,16 @@
       "oauth": false,  
       "primary": false,
       "version": "1.0.4"
+    },
+    {
+      "name": "Sprinkler Switch Timetable",
+      "id": "19a256dd-94b2-40a5-90f1-05e7038515f8",
+      "namespace": "csteele",
+      "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/SprinklerSchedule/SprinklerSchedule_childS.groovy",
+      "required": true,
+      "oauth": false,  
+      "primary": false,
+      "version": "1.0.0"
     }
   ],
   "drivers":[
