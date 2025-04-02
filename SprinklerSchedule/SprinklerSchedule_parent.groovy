@@ -47,6 +47,8 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.4	Make collection of outdoorRainDevice attributes to remove duplicates
+ *				 Added child switch option
  * csteele: v1.0.3	Initial Release (end Beta)
  * csteele: v1.0.2	Add Over Temp and Rain Detection to be used as a Conditional
  * csteele: v1.0.1	Send month2month and dayGroup to child Apps
@@ -55,7 +57,7 @@ This code is licensed as follows:
  *
  */
  
-	public static String version()      {  return "v1.0.3"  }
+	public static String version()      {  return "v1.0.4"  }
 
 definition(
 	name: "Sprinkler Schedule Manager",
@@ -87,7 +89,15 @@ def mainPage() {
       	      app (name: "sprinklerTimetable",
       	           appName: "Sprinkler Valve Timetable",
       	           namespace: "csteele",
-      	           title: "Create New Sprinkler Schedule",
+      	           title: "Create New Sprinkler VALVE Schedule",
+      	           multiple: true)
+		}
+	
+		section() {
+      	      app (name: "sprinklerTimetable",
+      	           appName: "Sprinkler Switch Timetable",
+      	           namespace: "csteele",
+      	           title: "Create New Sprinkler SWITCH Schedule",
       	           multiple: true)
 		}
 	
@@ -261,7 +271,7 @@ def selectRainDevice() {
 	if (outdoorRainDevice) {
 		def vars = [:]
 		def c1=1
-		atts = outdoorRainDevice?.supportedAttributes.toSet().sort { it?.toString()?.toLowerCase() }
+		atts = outdoorRainDevice?.supportedAttributes.collect { it?.toString()?.toLowerCase() }.toSet().sort()
 		atts.each { v ->
 			vars[c1++] = "$v"
 		}
