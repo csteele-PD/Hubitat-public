@@ -47,9 +47,14 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.5	corrected schEnable, so that enaDis is correct initially.
+ *                       null safe currentValve?.label/name.
+ *                       refactor rainHold to be by timetable,
+ *                        don't offer rain hold if no rain sensor device is selected.
+ *                        remove rainHold reset at midnight.
  * csteele: v1.0.4	adjusted valve open/close messages to use device label or name.
- *				 minimized Temp and Rain device attributes
- * csteele: v1.0.3	Initial Release (end Beta)
+ *				 minimized Temp and Rain device attributes.
+ * csteele: v1.0.3	Initial Release (end Beta).
  * csteele: v1.0.2	Add Over Temp and Rain Detection to be used as a Conditional
  * csteele: v1.0.1	Added month2month and dayGroupMaster from Parent
  * csteele: v1.0.0	Inspired by Matt Hammond's Lighting Schedule (child)
@@ -57,7 +62,7 @@ This code is licensed as follows:
  *
  */
  
-	public static String version()      {  return "v1.0.4"  }
+	public static String version()      {  return "v1.0.5"  }
 
 definition(
 	name: "Sprinkler Valve Timetable",
@@ -161,11 +166,13 @@ def main(){
 				paragraph displayGrpSched()		// display mapping of Valve to DayGroup - Section III
 				  selectDayGroup()
 			
-				input "rainEnable", "bool",
+				if (state.outdoorRainDevice) {
+					input "rainEnable", "bool",
 					title: "<b>Enable Rain Hold</b> for this entire Timetable", 
 					required: false,
 					defaultValue: false,
 					submitOnChange: false
+				}
 
 				paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
 		    }
@@ -613,6 +620,8 @@ def recvOutdoorRainHandler(evt) {
 def installCheck(){         
 	state.appInstalled = app.getInstallationState() 
 	if(state.appInstalled != 'COMPLETE'){
+		atomicState.paused = false
+		app?.updateSetting("schEnable",[value:"true",type:"bool"])
 		section{paragraph "Please hit 'Done' to Complete the install."}
 	}
 	else{
@@ -656,7 +665,6 @@ def reschedule() {		// midnight run to setup first schedule of the day.
 	unschedule(reschedule)
 	schedule('7 7 0 ? * *', reschedule) // reschedule the midnight run to schedule that day's work.
 	state.overTempToday = false // once a day, midnight, reset the over temp indicator
-	state.rainHold = false // once a day, midnight, reset the rain indicator
 	runIn(15, scheduleNext)
 }
 
@@ -682,8 +690,7 @@ def scheduleNext() {
 	}
 
 	if (state.rainHold && rainEnable) {
-		logWarn "Rain Hold - schedule skipped for $app.label Today."
-		return
+		logWarn "Rain Hold possible for $app.label Today."
 	}
 
 	Date date = new Date()
@@ -733,6 +740,12 @@ def schedHandler(data) {
 		return	
 	}
 
+	if (state.rainHold && rainEnable) { 
+		logWarn "Rain Hold - schedule skipped for $app.label Today."
+		runIn(60, scheduleNext)			// find and then schedule the next startTime for today
+		return
+	}	
+
 	valve2start = state.valves.findAll { it.value.dayGroup.contains(cd) }.keySet()
 	logDebug "schedHandler: $cd, $state.dayGroupMerge, valve2start: $valve2start" 
 
@@ -744,7 +757,7 @@ def schedHandler(data) {
    	currentValve = settings.valves?.find{it.id == "$vk"}
 	// some valves need turning on for their duration.
 	currentValve?.open()
-	logInfo "Valve ${currentValve.label ?: currentValve.name} opened."
+	logInfo "Valve ${currentValve?.label ?: currentValve?.name} opened."
 	state.inCycle = true
 	atomicState.cycleStart = now()
 	updateMyLabel()
@@ -770,7 +783,7 @@ def scheduleDurationHandler(data) {
    	currentValve = settings.valves?.find{it.id == "$cd"}
 	// stop the valve and start the next, if any.
 	currentValve?.close()
-	logInfo "Valve ${currentValve.label ?: currentValve.name} closed."
+	logInfo "Valve ${currentValve?.label ?: currentValve?.name} closed."
 
 	//valves*.close()	// close all the valves
     
@@ -784,7 +797,7 @@ def scheduleDurationHandler(data) {
 			valve2start = valve2start.tail()
 			currentValve = settings.valves?.find{it.id == "$vk"}
 			currentValve?.open()
-			logInfo "Valve ${currentValve.label ?: currentValve.name} opened."
+			logInfo "Valve ${currentValve?.label ?: currentValve?.name} opened."
 
 			runIn(duraSeconds, scheduleDurationHandler, [data: [vKey: "$vk", dS: "$duraSeconds", dV: "$valve2start"]])
 		}
