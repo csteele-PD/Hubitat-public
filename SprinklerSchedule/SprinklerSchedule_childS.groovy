@@ -47,11 +47,17 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.2	corrected schEnable, so that enaDis is correct initially.
+ *                       null safe currentValve?.label/name
+ *                       refactor rainHold to be by timetable,
+ *                        don't offer rain hold if no rain sensor device is selected.
+ *                        remove rainHold reset at midnight.
+ * csteele: v1.0.1	cosmetic valve/switch word adjustments 
  * csteele: v1.0.0	Converted to capability.switch from valve  
  *
  */
  
-	public static String version()      {  return "v1.0.0"  }
+	public static String version()      {  return "v1.0.2"  }
 
 definition(
 	name: "Sprinkler Switch Timetable",
@@ -98,7 +104,7 @@ def main(){
 				input "schEnable", "bool", title: "Schedule $enaDis", required: false, defaultValue: true, submitOnChange: true
 				atomicState.paused = schEnable ? false : true
 
-			paragraph "\n<b>Valve Select</b>"
+			paragraph "\n<b>Switch Select</b>"
 			input "valves",
       	        "capability.switch",
       	        title: "Control which valve switches?",
@@ -155,11 +161,13 @@ def main(){
 				paragraph displayGrpSched()		// display mapping of Valve to DayGroup - Section III
 				  selectDayGroup()
 			
-				input "rainEnable", "bool",
+				if (state.outdoorRainDevice) {
+					input "rainEnable", "bool",
 					title: "<b>Enable Rain Hold</b> for this entire Timetable", 
 					required: false,
 					defaultValue: false,
 					submitOnChange: false
+				}
 
 				paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
 		    }
@@ -607,6 +615,8 @@ def recvOutdoorRainHandler(evt) {
 def installCheck(){         
 	state.appInstalled = app.getInstallationState() 
 	if(state.appInstalled != 'COMPLETE'){
+		atomicState.paused = false
+		app?.updateSetting("schEnable",[value:"true",type:"bool"])
 		section{paragraph "Please hit 'Done' to Complete the install."}
 	}
 	else{
@@ -650,7 +660,6 @@ def reschedule() {		// midnight run to setup first schedule of the day.
 	unschedule(reschedule)
 	schedule('7 7 0 ? * *', reschedule) // reschedule the midnight run to schedule that day's work.
 	state.overTempToday = false // once a day, midnight, reset the over temp indicator
-	state.rainHold = false // once a day, midnight, reset the rain indicator
 	runIn(15, scheduleNext)
 }
 
@@ -676,8 +685,7 @@ def scheduleNext() {
 	}
 
 	if (state.rainHold && rainEnable) {
-		logWarn "Rain Hold - schedule skipped for $app.label Today."
-		return
+		logWarn "Rain Hold possible for $app.label Today."
 	}
 
 	Date date = new Date()
@@ -727,6 +735,12 @@ def schedHandler(data) {
 		return	
 	}
 
+	if (state.rainHold && rainEnable) { 
+		logWarn "Rain Hold - schedule skipped for $app.label Today."
+		runIn(60, scheduleNext)			// find and then schedule the next startTime for today
+		return
+	}	
+
 	valve2start = state.valves.findAll { it.value.dayGroup.contains(cd) }.keySet()
 	logDebug "schedHandler: $cd, $state.dayGroupMerge, valve2start: $valve2start" 
 
@@ -738,7 +752,7 @@ def schedHandler(data) {
    	currentValve = settings.valves?.find{it.id == "$vk"}
 	// some valves need turning on for their duration.
 	currentValve?.on()
-	logInfo "Valve switch ${currentValve.label ?: currentValve.name} on."
+	logInfo "Valve switch ${currentValve?.label ?: currentValve?.name} on."
 	state.inCycle = true
 	atomicState.cycleStart = now()
 	updateMyLabel()
@@ -764,7 +778,7 @@ def scheduleDurationHandler(data) {
    	currentValve = settings.valves?.find{it.id == "$cd"}
 	// stop the valve and start the next, if any.
 	currentValve?.off()
-	logInfo "Valve switch ${currentValve.label ?: currentValve.name} off."
+	logInfo "Valve switch ${currentValve?.label ?: currentValve?.name} off."
 
 	//valves*.close()	// close all the valves
     
@@ -778,7 +792,7 @@ def scheduleDurationHandler(data) {
 			valve2start = valve2start.tail()
 			currentValve = settings.valves?.find{it.id == "$vk"}
 			currentValve?.on()
-			logInfo "Valve switch ${currentValve.label ?: currentValve.name} on."
+			logInfo "Valve switch ${currentValve?.label ?: currentValve?.name} on."
 
 			runIn(duraSeconds, scheduleDurationHandler, [data: [vKey: "$vk", dS: "$duraSeconds", dV: "$valve2start"]])
 		}
@@ -872,7 +886,7 @@ def sectFormat(type, myText=""){
 
 
 def displayHeader() {
-	section (sectFormat("title", "Sprinkler Valve Timetable")) {
+	section (sectFormat("title", "Sprinkler Switch Timetable")) {
 		paragraph "<div style='color:#1A77C9;text-align:right;font-weight:small;font-size:9px;'>Developed by: C Steele, Matt Hammond<br/>Current Version: ${version()} -  ${thisCopyright}</div>"
 		paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
 	}
