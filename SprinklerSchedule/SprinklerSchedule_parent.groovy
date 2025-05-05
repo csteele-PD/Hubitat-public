@@ -47,8 +47,9 @@ This code is licensed as follows:
  *
  *
  *
- * csteele: v1.0.4	Make collection of outdoorRainDevice attributes to remove duplicates
- *				 Added child switch option
+ * csteele: v1.0.5	Don't tell the children about rain or temperature devices that don't exist. 
+ * csteele: v1.0.4	Added child switch option
+ *				 Make collection of outdoorRainDevice attributes to remove duplicates
  * csteele: v1.0.3	Initial Release (end Beta)
  * csteele: v1.0.2	Add Over Temp and Rain Detection to be used as a Conditional
  * csteele: v1.0.1	Send month2month and dayGroup to child Apps
@@ -57,7 +58,7 @@ This code is licensed as follows:
  *
  */
  
-	public static String version()      {  return "v1.0.4"  }
+	public static String version()      {  return "v1.0.5"  }
 
 definition(
 	name: "Sprinkler Schedule Manager",
@@ -102,7 +103,7 @@ def mainPage() {
 		}
 	
 		section() {
-		  	input "advancedOption", "bool", title: "Display Options that become common to all Sprinkler Valve Timetables.", required: false, defaultValue: false, submitOnChange: true
+		  	input "advancedOption", "bool", title: "Display Options that become common to all Sprinkler Timetables.", required: false, defaultValue: false, submitOnChange: true
 			input name: "quickref", type: "hidden", title:"<a href='https://www.hubitatcommunity.com/QuikRef/sprinklerScheduleManagerInfo/index.html' target='_blank'>Quick Reference ${version()}</a>"
 		}
 		if (advancedOption) {
@@ -114,8 +115,8 @@ def mainPage() {
 			  childApps.each {child ->
 			  	child.set2Month(state.month2month) 
 			  	child.set2DayGroup(state.dayGroup) 
-				child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp)
-				child.setOutdoorRain(outdoorRainDevice, state.currentRainAttribute) 
+				if (outdoorTempDevice) { child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) }
+				if (outdoorRainDevice) { child.setOutdoorRain(outdoorRainDevice, state.currentRainAttribute) }
 			  }
 		}
 	}
@@ -332,8 +333,7 @@ def remDayGroup(evt = null) {  	// remove a Local dayGroup & dayGroupSettings
 		def dayGrpReOrder = [:]
 		def counter = 1
 		state.dayGroup.sort { it.key.toInteger() }.each { k, v ->
-		    dayGrpReOrder["${counter}"] = v
-		    counter++
+		    dayGrpReOrder["${counter++}"] = v
 		}
 		state.dayGroup = dayGrpReOrder
 	}
@@ -357,8 +357,8 @@ def updated() {
 	childApps.each {child ->
 		child.set2Month(state.month2month) 
 		child.set2DayGroup(state.dayGroup) 
-		child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) 
-		child.setOutdoorRain(outdoorRainDevice, state.currentRainAttribute) 
+		if (outdoorTempDevice) { child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) }
+		if (outdoorRainDevice) { child.setOutdoorRain(outdoorRainDevice, state.currentRainAttribute) }
 	}
 }
 
@@ -385,8 +385,8 @@ def componentInitialize(cd) {
 
 	cd.set2Month(state.month2month) 
 	cd.set2DayGroup(state.dayGroup) 
-	cd.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) 
-	cd.setOutdoorRain(outdoorRainDevice, state.currentRainAttribute) 
+	if (outdoorTempDevice) { child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) }
+	if (outdoorRainDevice) { child.setOutdoorRain(outdoorRainDevice, state.currentRainAttribute) }
 }
 
 
