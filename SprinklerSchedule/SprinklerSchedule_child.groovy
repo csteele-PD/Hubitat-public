@@ -47,6 +47,7 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.6	Allow multiple Rain Sensors to be integrated.
  * csteele: v1.0.5	corrected schEnable, so that enaDis is correct initially.
  *                       null safe currentValve?.label/name.
  *                       refactor rainHold to be by timetable,
@@ -62,7 +63,7 @@ This code is licensed as follows:
  *
  */
  
-	public static String version()      {  return "v1.0.5"  }
+	public static String version()      {  return "v1.0.6"  }
 
 definition(
 	name: "Sprinkler Valve Timetable",
@@ -166,12 +167,16 @@ def main(){
 				paragraph displayGrpSched()		// display mapping of Valve to DayGroup - Section III
 				  selectDayGroup()
 			
-				if (state.outdoorRainDevice) {
-					input "rainEnable", "bool",
-					title: "<b>Enable Rain Hold</b> for this entire Timetable", 
-					required: false,
-					defaultValue: false,
-					submitOnChange: false
+				if (state.outdoorRainDevice != [:]) {
+					def rainVars = ["0": "no rainHold"]
+					state.outdoorRainDevice.each { key, info ->
+						rainVars[key] = info.name
+					}
+					input "rainEnableDevice", "enum", 
+						title: "<b>Choose the Rain Sensor for this Timetable</b><p><i>leave unselected for no Rain Hold</i></p>", 
+						submitOnChange: true, 
+						defaultValue: "0",
+						options: rainVars
 				}
 
 				paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
@@ -593,13 +598,19 @@ def setOutdoorTemp(aTempDevice, dTemp) {
 
 
 def setOutdoorRain(aRainDevice, rainAttr) {
-	state.outdoorRainDevice = aRainDevice.currentStates
-	state.rainAttribute = rainAttr
-	def rainNow = aRainDevice.currentValue(rainAttr)
-	state.rainHold = aRainDevice.currentValue(rainAttr) == "wet" ? true : false
-	logInfo "OutdoorRain update from Parent, rainNow: $rainNow." 
 	unsubscribe(recvOutdoorRainHandler)
-	subscribe(aRainDevice, rainAttr, recvOutdoorRainHandler)
+	state.rainAttribute = rainAttr
+	aRainDevice.each {ard -> 
+		def ms1 = ard.label ?: ard.name		// use the Name when Label is blank.
+		state.outdoorRainDevice[ard.id.toString()] = [
+            	value: ard.currentValue(rainAttr),
+            	name : ms1
+		]
+		logInfo "OutdoorRain update from Parent, $ms1: ${ard.currentValue(rainAttr)}"
+		subscribe(ard, rainAttr, recvOutdoorRainHandler)
+	}
+
+	state.rainHold = rainEnableDevice && rainEnableDevice != "0" && state.outdoorRainDevice[rainEnableDevice]?.value.toLowerCase() == "wet"
 }
 
 
@@ -612,8 +623,15 @@ def recvOutdoorTempHandler(evt) {
 
 
 def recvOutdoorRainHandler(evt) {
-	state.rainHold = evt.value == "wet" ? true : false
-	logDebug "OutdoorRain update from Device. rainHold: $state.rainHold"
+	if (rainEnableDevice == evt.deviceId.toString()) {
+		def ms1 = evt.label ?: evt.name		// use the Name when Label is blank.
+		state.outdoorRainDevice[evt.id.toString()] = [
+            	value: evt.currentValue(rainAttr),
+            	name : ms1
+		]
+		state.rainHold = evt.value.toLowerCase() == "wet"
+		logDebug "OutdoorRain update from Device. rainHold: $state.rainHold"
+	}
 }
 
 
@@ -639,10 +657,11 @@ def init(why) {
 			if(state.overTempToday == null) state.overTempToday = false 
 			if(state.rainHold == null) state.rainHold = false
 			if(state.dayGroup == null) state.dayGroup = ['1': ['1':true, '2':true, '3':true, '4':true, '5':true, '6':true, '7':true, "s": "P", "name": "", "ot": false, "ra": false, "duraTime": null, "startTime": null ] ] // initial row
+			if(state.outdoorRainDevice == null) state.outdoorRainDevice = [:] 
 
 			if(state.month2month == null) state.month2month = [:]
 			if(state.dayGroupMaster == null) state.dayGroupMaster = [:]
-			settings.valves.each { dev -> if(!state.valves["$dev.id"]) { state.valves["$dev.id"] = ['dayGroup':['1']] } } 
+			valves.each { dev -> if(!state.valves["$dev.id"]) { state.valves["$dev.id"] = ['dayGroup':['1']] } } 
 			break; 
 	}
 }
@@ -689,7 +708,7 @@ def scheduleNext() {
 		return
 	}
 
-	if (state.rainHold && rainEnable) {
+	if (state.rainHold && rainEnableDevice && rainEnableDevice != "0") {
 		logWarn "Rain Hold possible for $app.label Today."
 	}
 
@@ -740,7 +759,7 @@ def schedHandler(data) {
 		return	
 	}
 
-	if (state.rainHold && rainEnable) { 
+	if (rainEnableDevice && rainEnableDevice != "0" && state.outdoorRainDevice[rainEnableDevice]?.value?.toLowerCase() == "wet") { 
 		logWarn "Rain Hold - schedule skipped for $app.label Today."
 		runIn(60, scheduleNext)			// find and then schedule the next startTime for today
 		return
