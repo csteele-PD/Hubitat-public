@@ -50,7 +50,7 @@ This code is licensed as follows:
  * csteele: v1.0.6	Added multiple Rain Sensors to be integrated.
  * csteele: v1.0.5	Don't tell the children about rain or temperature devices that don't exist. 
  * csteele: v1.0.4	Added child switch option
- *				 Make collection of outdoorRainDevice attributes to remove duplicates
+ *				 Make collection of rainDeviceOutdoor attributes to remove duplicates
  * csteele: v1.0.3	Initial Release (end Beta)
  * csteele: v1.0.2	Add Over Temp and Rain Detection to be used as a Conditional
  * csteele: v1.0.1	Send month2month and dayGroup to child Apps
@@ -117,7 +117,7 @@ def mainPage() {
 			  	child.set2Month(state.month2month) 
 			  	child.set2DayGroup(state.dayGroup) 
 				if (outdoorTempDevice) { child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) }
-				if (outdoorRainDevice) { child.setOutdoorRain(outdoorRainDevice, state.currentRainAttribute) }
+				if (rainDeviceOutdoor) { child.setOutdoorRain(rainDeviceOutdoor, state.currentRainAttribute) }
 			  }
 		}
 	}
@@ -264,16 +264,16 @@ def selectTemperatureDevice() {
 def selectRainDevice() {
 
 	paragraph "\n<b>Rain Device Selection</b>"
-			input "outdoorRainDevice", "capability.waterSensor",
+			input "rainDeviceOutdoor", "capability.waterSensor",
       	        title: "Select which device?",
       	        multiple: true,
       	        required: false,
       	        submitOnChange: true
 
-	if (outdoorRainDevice) {
+	if (rainDeviceOutdoor) {
 		def vars = [:]
 		def c1=1
-		atts = outdoorRainDevice?.collectMany { c2 -> 
+		atts = rainDeviceOutdoor?.collectMany { c2 -> 
 			c2.supportedAttributes.collect { it?.toString()?.toLowerCase() } }?.toSet()?.sort()
 
 		atts.each { v ->
@@ -361,7 +361,7 @@ def updated() {
 		child.set2Month(state.month2month) 
 		child.set2DayGroup(state.dayGroup) 
 		if (outdoorTempDevice) { child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) }
-		if (outdoorRainDevice) { child.setOutdoorRain(outdoorRainDevice, state.currentRainAttribute) }
+		if (rainDeviceOutdoor) { child.setOutdoorRain(rainDeviceOutdoor, state.currentRainAttribute) }
 	}
 }
 
@@ -389,7 +389,7 @@ def componentInitialize(cd) {
 	cd.set2Month(state.month2month) 
 	cd.set2DayGroup(state.dayGroup) 
 	if (outdoorTempDevice) { child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) }
-	if (outdoorRainDevice) { child.setOutdoorRain(outdoorRainDevice, state.currentRainAttribute) }
+	if (rainDeviceOutdoor) { child.setOutdoorRain(rainDeviceOutdoor, state.currentRainAttribute) }
 }
 
 
