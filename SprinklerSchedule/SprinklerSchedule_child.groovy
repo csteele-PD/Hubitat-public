@@ -47,6 +47,7 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.7	After carefully fixing schEnable display, it wasn't used in scheduleNext logic. 
  * csteele: v1.0.6	Allow multiple Rain Sensors to be integrated.
  * csteele: v1.0.5	corrected schEnable, so that enaDis is correct initially.
  *                       null safe currentValve?.label/name.
@@ -63,7 +64,7 @@ This code is licensed as follows:
  *
  */
  
-	public static String version()      {  return "v1.0.6"  }
+	public static String version()      {  return "v1.0.7"  }
 
 definition(
 	name: "Sprinkler Valve Timetable",
@@ -106,9 +107,8 @@ def main(){
 			}
 	
 			paragraph ""
-				enaDis = atomicState.paused ? "Disabled" : "Enabled" 
-				input "schEnable", "bool", title: "Schedule $enaDis", required: false, defaultValue: true, submitOnChange: true
-				atomicState.paused = schEnable ? false : true
+				input "schEnable", "bool", title: "Schedule Active?", required: false, defaultValue: true, submitOnChange: true
+				state.paused = schEnable ? false : true
 
 			paragraph "\n<b>Valve Select</b>"
 			input "valves",
@@ -201,10 +201,10 @@ String displayDayGroups() {	// display day-of-week groups - Section I
 		state.remove("dayGroupBtn") // only once 
 		logDebug "displayDayGroups Item: $dgK.$dgI"
 	}
-	if(state.overTempBtn) {		// toggle the overTemp checkmarks 
+	if(state.overTempBtn) {			// toggle the overTemp checkmarks 
 		dgK = state.overTempBtn[0].toInteger() - incM // overTempBtn Key
        	if (state.dayGroup.containsKey(dgK.toString())) { state.dayGroup[dgK.toString()].ot = !state.dayGroup[dgK.toString()].ot } // Toggle state
-		state.remove("overTempBtn") // only once 
+		state.remove("overTempBtn") 	// only once 
 	}
 
 	masterGroupMerge()	// merge or riffle merge if there's a new mMap from Parent.
@@ -638,7 +638,7 @@ def recvOutdoorRainHandler(evt) {
 def installCheck(){         
 	state.appInstalled = app.getInstallationState() 
 	if(state.appInstalled != 'COMPLETE'){
-		atomicState.paused = false
+		state.paused = false
 		app?.updateSetting("schEnable",[value:"true",type:"bool"])
 		section{paragraph "Please hit 'Done' to Complete the install."}
 	}
@@ -652,7 +652,7 @@ def init(why) {
 	switch(why) {            
 		case 1: 
 			if(state.valves == null) state.valves = [:] 
-			if(atomicState.paused == null) atomicState.paused = true // the switch visually is inverted from the logic. Default = true aka enabled/not paused.
+			if(state.paused == null) state.paused = false // the switch visually is inverted from the logic. Default = true aka enabled/not paused.
 			if(state.inCycle == null) state.inCycle = false
 			if(state.overTempToday == null) state.overTempToday = false 
 			if(state.rainHold == null) state.rainHold = false
@@ -705,6 +705,11 @@ def scheduleNext() {
 	timings = buildTimings(cronDay)
 	if (!timings) {
 		logWarn "Nothing scheduled for $app.label Today."
+		return
+	}
+	
+	if (!schEnable) {
+		logWarn "Schedule Paused for $app.label."
 		return
 	}
 
