@@ -47,6 +47,7 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.9	Skip when no valves in a schedule.
  * csteele: v1.0.8	Adjustments to recvOutdoorRainHandler().
  * csteele: v1.0.7	After carefully fixing schEnable display, it wasn't used in scheduleNext logic. 
  * csteele: v1.0.6	Allow multiple Rain Sensors to be integrated.
@@ -65,7 +66,7 @@ This code is licensed as follows:
  *
  */
  
-	public static String version()      {  return "v1.0.8"  }
+	public static String version()      {  return "v1.0.9"  }
 
 definition(
 	name: "Sprinkler Valve Timetable",
@@ -771,6 +772,11 @@ def schedHandler(data) {
 	}	
 
 	valve2start = state.valves.findAll { it.value.dayGroup.contains(cd) }.keySet()
+	if (!valve2start) {
+		logInfo "End of Valve list."
+		runIn(60, scheduleNext)			// find and then schedule the next startTime for today
+		return
+	}
 	logDebug "schedHandler: $cd, $state.dayGroupMerge, valve2start: $valve2start" 
 
 	vk = valve2start[0] as String
