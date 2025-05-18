@@ -47,6 +47,7 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.8	Adjustments to recvOutdoorRainHandler().
  * csteele: v1.0.7	After carefully fixing schEnable display, it wasn't used in scheduleNext logic. 
  * csteele: v1.0.6	Allow multiple Rain Sensors to be integrated.
  * csteele: v1.0.5	corrected schEnable, so that enaDis is correct initially.
@@ -64,7 +65,7 @@ This code is licensed as follows:
  *
  */
  
-	public static String version()      {  return "v1.0.7"  }
+	public static String version()      {  return "v1.0.8"  }
 
 definition(
 	name: "Sprinkler Valve Timetable",
@@ -624,10 +625,9 @@ def recvOutdoorTempHandler(evt) {
 
 def recvOutdoorRainHandler(evt) {
 	if (rainEnableDevice == evt.deviceId.toString()) {
-		def ms1 = evt.label ?: evt.name		// use the Name when Label is blank.
 		state.rainDeviceOutdoor[evt.id.toString()] = [
-            	value: evt.currentValue(rainAttr),
-            	name : ms1
+            	value: evt?.value,
+            	name : evt?.displayName
 		]
 		state.rainHold = evt.value.toLowerCase() == "wet"
 		logDebug "OutdoorRain update from Device. rainHold: $state.rainHold"
