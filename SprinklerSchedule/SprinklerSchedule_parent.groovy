@@ -47,6 +47,7 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.7	editMonths() defaultValue pre-fill corrected.
  * csteele: v1.0.6	Added multiple Rain Sensors to be integrated.
  * csteele: v1.0.5	Don't tell the children about rain or temperature devices that don't exist. 
  * csteele: v1.0.4	Added child switch option
@@ -59,7 +60,7 @@ This code is licensed as follows:
  *
  */
  
-	public static String version()      {  return "v1.0.6"  }
+	public static String version()      {  return "v1.0.7"  }
 
 definition(
 	name: "Sprinkler Schedule Manager",
@@ -161,8 +162,8 @@ def advancedPage() {
 String displayMonths() {	// display Monthly percentages
 	if(state.month2month == null) state.month2month = ["1":"100", "2":"100", "3":"100", "4":"100", "5":"100", "6":"100", "7":"100", "8":"100", "9":"100", "10":"100", "11":"100", "12":"100"]
 	
-	String str = "<i>Assume that Valve Timing is 100% and adjust that timing by the percentages, monthly. Valve Duration is reduced to the percentage defined for the month in which it runs.<br>"
-	str += "Example: If a Valve is set to be 15 minutes, and the current month has a value of 30%, the valve will run for 5 minutes each day of the month.</i><p>"
+	String str = "<i>Assume that Valve Duration (as set in the Child) is 100% and adjust that timing by these percentages, monthly. Valve Duration is reduced to the percentage defined for the month in which it runs. (20 seconds is the valve's minimum duration.) "
+	str += "Example: If a Valve is set to be 15 minutes, and the current month has a value of 30%, the valve will run for 5 minutes each day of the month its scheduled to run.</i><p>"
 	str += "<style>.mdl-data-table tbody tr:hover{background-color:inherit} .tstat-col td,.tstat-col th { padding:8px 8px;text-align:center;font-size:12px} .tstat-col td {font-size:15px }" +
 		"</style><div style='overflow-x:auto'><table class='mdl-data-table tstat-col' style=';border:2px solid black'>" +
 		"<thead><tr style='border-bottom:2px solid black'>" +
@@ -253,7 +254,7 @@ def selectTemperatureDevice() {
 
 	paragraph "\n<b>Maximum Temperature</b>"
 			input "maxOutdoorTemp", "number",
-      	        title: "<i>Enter the Maximum temperature beyond which conditional Timetables will be skipped.</i>",
+      	        title: "<i>Enter the Maximum temperature, beyond which, conditional Timetables will be invoked.</i>",
       	        defaultValue: maxOutdoorTemp,
       	        multiple: false,
       	        required: false,
@@ -302,7 +303,7 @@ Display level handlers
 
 def editMonths() {
 	if (state.dispMonthBtn) {
-		input "monthPercentage", "decimal", title: "Monthly Percentage", submitOnChange: true, width: 4, range: "1..100", defaultValue: state.month2month[state.dispMonthBtn], newLineAfter: true
+		input "monthPercentage", "decimal", title: "Monthly Percentage", submitOnChange: true, width: 4, range: "1..100", defaultValue: state.month2month[state.dispMonthBtn]
 		if(monthPercentage) {
 			state.month2month[state.dispMonthBtn] = monthPercentage
 			state.remove("dispMonthBtn")
@@ -440,6 +441,7 @@ String buttonLink(String btnName, String linkText, color = "#1A77C9", font = "15
 void appButtonHandler(btn) {
 	state.remove("dispMonthBtn")
 	state.remove("dayGroupBtn")
+	app.removeSetting("monthPercentage") // duplicate but required.
 	if ( btn.startsWith("m"))  state.dispMonthBtn = btn.minus("m")
 	else if ( btn == "addDGBtn")            addDayGroup()
 	else if ( btn.startsWith("rem")      )  remDayGroup(btn.minus("rem")) 
