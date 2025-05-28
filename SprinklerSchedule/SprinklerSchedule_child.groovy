@@ -47,6 +47,7 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.10	initialize state.rainDeviceOutdoor in setOutdoorRain.
  * csteele: v1.0.9	Skip when no valves in a schedule.
  * csteele: v1.0.8	Adjustments to recvOutdoorRainHandler().
  * csteele: v1.0.7	After carefully fixing schEnable display, it wasn't used in scheduleNext logic. 
@@ -54,8 +55,8 @@ This code is licensed as follows:
  * csteele: v1.0.5	corrected schEnable, so that enaDis is correct initially.
  *                       null safe currentValve?.label/name.
  *                       refactor rainHold to be by timetable,
- *                        don't offer rain hold if no rain sensor device is selected.
- *                        remove rainHold reset at midnight.
+ *                       don't offer rain hold if no rain sensor device is selected.
+ *                       remove rainHold reset at midnight.
  * csteele: v1.0.4	adjusted valve open/close messages to use device label or name.
  *				 minimized Temp and Rain device attributes.
  * csteele: v1.0.3	Initial Release (end Beta).
@@ -66,7 +67,7 @@ This code is licensed as follows:
  *
  */
  
-	public static String version()      {  return "v1.0.9"  }
+	public static String version()      {  return "v1.0.10"  }
 
 definition(
 	name: "Sprinkler Valve Timetable",
@@ -601,6 +602,7 @@ def setOutdoorTemp(aTempDevice, dTemp) {
 
 def setOutdoorRain(aRainDevice, rainAttr) {
 	unsubscribe(recvOutdoorRainHandler)
+	state.rainDeviceOutdoor = [:]
 	state.rainAttribute = rainAttr
 	aRainDevice.each {ard -> 
 		def ms1 = ard.label ?: ard.name		// use the Name when Label is blank.
@@ -611,7 +613,6 @@ def setOutdoorRain(aRainDevice, rainAttr) {
 		logInfo "OutdoorRain update from Parent, $ms1: ${ard.currentValue(rainAttr)}"
 		subscribe(ard, rainAttr, recvOutdoorRainHandler)
 	}
-
 	state.rainHold = rainEnableDevice && rainEnableDevice != "0" && state.rainDeviceOutdoor[rainEnableDevice]?.value.toLowerCase() == "wet"
 }
 
@@ -773,7 +774,7 @@ def schedHandler(data) {
 
 	valve2start = state.valves.findAll { it.value.dayGroup.contains(cd) }.keySet()
 	if (!valve2start) {
-		logInfo "End of Valve list."
+		logInfo "No Valve in Day Group."
 		runIn(60, scheduleNext)			// find and then schedule the next startTime for today
 		return
 	}
