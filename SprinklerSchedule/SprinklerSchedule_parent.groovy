@@ -47,8 +47,9 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.8	initialize state.month2month on child creation.
  * csteele: v1.0.7	editMonths() defaultValue pre-fill corrected.
- * csteele: v1.0.6	Added multiple Rain Sensors to be integrated.
+ * csteele: v1.0.6	Added multiple Rain Sensors and be integrated.
  * csteele: v1.0.5	Don't tell the children about rain or temperature devices that don't exist. 
  * csteele: v1.0.4	Added child switch option
  *				 Make collection of rainDeviceOutdoor attributes to remove duplicates
@@ -59,8 +60,8 @@ This code is licensed as follows:
  *                	 Converted to capability.valve from switch 
  *
  */
- 
-	public static String version()      {  return "v1.0.7"  }
+
+	public static String version()      {  return "v1.0.8"  }
 
 definition(
 	name: "Sprinkler Schedule Manager",
@@ -160,7 +161,7 @@ def advancedPage() {
 
 
 String displayMonths() {	// display Monthly percentages
-	if(state.month2month == null) state.month2month = ["1":"100", "2":"100", "3":"100", "4":"100", "5":"100", "6":"100", "7":"100", "8":"100", "9":"100", "10":"100", "11":"100", "12":"100"]
+	if (state.month2month == null) state.month2month = ["1":"100", "2":"100", "3":"100", "4":"100", "5":"100", "6":"100", "7":"100", "8":"100", "9":"100", "10":"100", "11":"100", "12":"100"]
 	
 	String str = "<i>Assume that Valve Duration (as set in the Child) is 100% and adjust that timing by these percentages, monthly. Valve Duration is reduced to the percentage defined for the month in which it runs. (20 seconds is the valve's minimum duration.) "
 	str += "Example: If a Valve is set to be 15 minutes, and the current month has a value of 30%, the valve will run for 5 minutes each day of the month its scheduled to run.</i><p>"
@@ -242,6 +243,7 @@ String displayDayGroups() {	// display day-of-week groups
 	str += "</tr></table></div>"
 	str
 }
+
 
 def selectTemperatureDevice() {
 
@@ -387,6 +389,7 @@ Helper/Handler functions
 def componentInitialize(cd) { 
 	if (!advancedOption) return
 
+	if (state.month2month == null) state.month2month = ["1":"100", "2":"100", "3":"100", "4":"100", "5":"100", "6":"100", "7":"100", "8":"100", "9":"100", "10":"100", "11":"100", "12":"100"]
 	cd.set2Month(state.month2month) 
 	cd.set2DayGroup(state.dayGroup) 
 	if (outdoorTempDevice) { child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) }
