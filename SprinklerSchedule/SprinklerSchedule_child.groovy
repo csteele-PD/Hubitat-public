@@ -47,6 +47,7 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.11	corrected updateMyLabel().
  * csteele: v1.0.10	initialize state.rainDeviceOutdoor in setOutdoorRain.
  * csteele: v1.0.9	Skip when no valves in a schedule.
  * csteele: v1.0.8	Adjustments to recvOutdoorRainHandler().
@@ -67,7 +68,7 @@ This code is licensed as follows:
  *
  */
  
-	public static String version()      {  return "v1.0.10"  }
+	public static String version()      {  return "v1.0.11"  }
 
 definition(
 	name: "Sprinkler Valve Timetable",
@@ -88,25 +89,17 @@ preferences {
 def main(){
 	init(1) 	// during first time install of child, along with installCheck(), pre-populate any un-initialized elements 
 	dynamicPage(name: "main", title: "", uninstall: true, install: true){
-		updateMyLabel()
+		updateMyLabel(1)
 		displayHeader()
 		state.appInstalled = app.getInstallationState() // validate that the Done button has been clicked the first time
 		if (state.appInstalled != 'COMPLETE') return installCheck() 
 
       	section(menuHeader("General")) {
 			label title: "<b>Name for this application</b>", required: false, submitOnChange: true
-			if (!app.label) {
-				app.updateLabel(app.name)
-				atomicState.appDisplayName = app.name
-			}
 			if (app.label.contains('<span ')) {
-				if (atomicState?.appDisplayName != null) {
-					app.updateLabel(atomicState.appDisplayName)
-				} else {
-					String myLabel = app.label.substring(0, app.label.indexOf('<span '))
-					atomicState.appDisplayName = myLabel
-					app.updateLabel(myLabel)
-				}				
+				String myLabel = app.label.substring(0, app.label.indexOf('<span '))
+				atomicState.appDisplayName = myLabel
+				app.updateLabel(myLabel)
 			}
 	
 			paragraph ""
@@ -509,7 +502,6 @@ void appButtonHandler(btn) {
 	else if ( btn.startsWith("w")        )  state.dayGroupBtn = btn.minus("w")
 	else if ( btn.startsWith("o")        )  state.overTempBtn = btn.minus("o")
 	else if ( btn.startsWith("x")        )  state.eraseTime = btn.minus("x")
-
 }
 
 
@@ -568,7 +560,7 @@ def updated() {
 
 
 def update() {
-	updateMyLabel()
+	updateMyLabel(2)
 	scheduleNext()
 }
 
@@ -653,6 +645,10 @@ def installCheck(){
 def init(why) {
 	switch(why) {            
 		case 1: 
+			if (!app.label) {
+				app.updateLabel(app.name)
+ 				atomicState.appDisplayName = app.name
+			}
 			if(state.valves == null) state.valves = [:] 
 			if(state.paused == null) state.paused = false // the switch visually is inverted from the logic. Default = true aka enabled/not paused.
 			if(state.inCycle == null) state.inCycle = false
@@ -691,6 +687,10 @@ def reschedule() {		// midnight run to setup first schedule of the day.
 
 
 def scheduleNext() {
+	String myLabel = app.label
+	if (app.label.contains('<span ')) {
+		myLabel = app.label.substring(0, app.label.indexOf('<span '))
+	}
 	hasZero = state.dayGroupMerge.any { key, value -> value.any { it.value.toString() == "0" } } || state.valves?.isEmpty()
 	if (hasZero) {
 		logWarn "Please set Time and Duration"
@@ -700,23 +700,23 @@ def scheduleNext() {
 	unschedule(reschedule)
 	schedule('7 7 0 ? * *', reschedule) // reschedule the midnight run to schedule that day's work.
 
-	logInfo "Checking $app.label Schedule."
+	logInfo "Checking $myLabel Schedule."
 	Calendar calendar = Calendar.getInstance();
 	def cronDay = calendar.get(Calendar.DAY_OF_WEEK);
 
 	timings = buildTimings(cronDay)
 	if (!timings) {
-		logWarn "Nothing scheduled for $app.label Today."
+ 		logWarn "Nothing scheduled for $myLabel Today."
 		return
 	}
 	
 	if (!schEnable) {
-		logWarn "Schedule Paused for $app.label."
+		logWarn "Schedule Paused for $myLabel."
 		return
 	}
 
 	if (state.rainHold && rainEnableDevice && rainEnableDevice != "0") {
-		logWarn "Rain Hold possible for $app.label Today."
+		logWarn "Rain Hold possible for $myLabel Today."
 	}
 
 	Date date = new Date()
@@ -733,10 +733,10 @@ def scheduleNext() {
 	logDebug "schedule('0 $stm $sth ? * *', schedHandler, [data: ['dKey': $sk]]), hasSched: $hasSched"
 	if (hasSched) { 
 		schedule("0 ${stm} ${sth} ? * *", schedHandler, [data: ["dKey":"$sk"]]) 
-		logInfo "$app.label scheduled today."
+		logInfo "$myLabel scheduled today."
 	}
 	else {
-		logInfo "Nothing scheduled for $app.label today."
+		logInfo "Nothing scheduled for $myLabel today."
 	}
 }
 
@@ -749,7 +749,11 @@ def scheduleNext() {
 
 def schedHandler(data) {
 	unschedule(schedHandler)	// don't repeat this day after day.
-	logInfo "Running $app.name Schedule."
+	String myLabel = app.label
+	if (app.label.contains('<span ')) {
+		myLabel = app.label.substring(0, app.label.indexOf('<span '))
+	}
+	logInfo "Running $myLabel Schedule."
 	cd = data["dKey"] as String
 	duraT = state.dayGroupMerge."$cd".duraTime
 
@@ -767,7 +771,7 @@ def schedHandler(data) {
 	}
 
 	if (rainEnableDevice && rainEnableDevice != "0" && state.rainDeviceOutdoor[rainEnableDevice]?.value?.toLowerCase() == "wet") { 
-		logWarn "Rain Hold - schedule skipped for $app.label Today."
+		logWarn "Rain Hold - schedule skipped for $myLabel Today."
 		runIn(60, scheduleNext)			// find and then schedule the next startTime for today
 		return
 	}	
@@ -791,7 +795,7 @@ def schedHandler(data) {
 	logInfo "Valve ${currentValve?.label ?: currentValve?.name} opened."
 	state.inCycle = true
 	atomicState.cycleStart = now()
-	updateMyLabel()
+	updateMyLabel(3)
     
 	duraT = state.dayGroupMerge."$cd".duraTime
 	currentMonth = new Date().format("M") 	// Get the current month as a number (1-12)
@@ -836,7 +840,7 @@ def scheduleDurationHandler(data) {
 		state.inCycle = false
 		atomicState.cycleEnd = now()
 		runIn(30, scheduleNext)			// find and then schedule the next startTime for today
-		updateMyLabel()
+		updateMyLabel(4)
 	}
 }
 
@@ -851,60 +855,55 @@ def buildTimings(cronDayOf) {
 }
 
 
-void updateMyLabel() {
+void updateMyLabel(num) {
 	String flag = '<span '
-	
-	// Display Ecobee connection status as part of the label...
-	String myLabel = atomicState.appDisplayName
-	if ((myLabel == null) || !app.label.startsWith(myLabel)) {
-		myLabel = app.label ?: app.name
-		if (!myLabel.contains(flag)) atomicState.appDisplayName = myLabel
-	} 
-	if (myLabel.contains(flag)) {
-		// strip off any connection status tag
-		myLabel = myLabel.substring(0, myLabel.indexOf(flag))
-		atomicState.appDisplayName = myLabel
+	String myLabel = app.label
+	if (app.label?.contains(flag)) { ///atomicState.appDisplayName.contains(flag)) {
+		myLabel = app.label.substring(0, app.label.indexOf(flag))// ?: atomicState.appDisplayName
 	}
+
+	// Display status as part of the label...
 	String newLabel
 	if (atomicState.isPaused) {
 		newLabel = myLabel + '<span style="color:Crimson"> (paused)</span>'
-	} else if (atomicState.cycleOn) {
+	} else if (state.inCycle) {
 		String beganAt = atomicState.cycleStart ? "started " + fixDateTimeString(atomicState.cycleStart) : 'running'
 		newLabel = myLabel + "<span style=\"color:Green\"> (${beganAt})</span>"
-	} else if ((atomicState.cycleOn != null) && (atomicState.cycleOn == false)) {
+	} else if ((state.inCycle != null) && (state.inCycle == false)) {
 		String endedAt = atomicState.cycleEnd ? "finished " + fixDateTimeString(atomicState.cycleEnd) : 'idle'
 		newLabel = myLabel + "<span style=\"color:Green\"> (${endedAt})</span>"
 	} else {
 		newLabel = myLabel
 	}
-	if (app.label != newLabel) app.updateLabel(newLabel)
+	if (myLabel != newLabel) app.updateLabel(newLabel)
 }
 
 
 String fixDateTimeString(eventDate) {
-    def target = new Date(eventDate)
-    def today = new Date().clearTime()
-    def yesterday = new Date(today.time - 1 * 24 * 60 * 60 * 1000) // Subtract 1 day
-    def tomorrow = new Date(today.time + 1 * 24 * 60 * 60 * 1000) // Add 1 day
-
-    String myDate = ''
-    boolean showTime = true
-
-    if (target.clearTime() == today) {
-        myDate = 'today'
-    } else if (target.clearTime() == yesterday) {
-        myDate = 'yesterday'
-    } else if (target.clearTime() == tomorrow) {
-        myDate = 'tomorrow'
-    } else if (target.format('yyyy-MM-dd') == '2035-01-01') { // "Infinity" case
-        myDate = 'a long time from now'
-        showTime = false
-    } else {
-        myDate = "on ${target.format('MM-dd')}"
-    }
-
-    String myTime = showTime ? target.format('h:mma').toLowerCase() : ''
-    return myTime ? "${myDate} at ${myTime}" : myDate
+	def target = new Date(eventDate)
+	def today = new Date().clearTime()
+	def yesterday = new Date(today.time - 1 * 24 * 60 * 60 * 1000) // Subtract 1 day
+	def tomorrow = new Date(today.time + 1 * 24 * 60 * 60 * 1000) // Add 1 day
+	
+	String myDate = ''
+	boolean showTime = true
+	
+	if (target.clearTime() == today) {
+	    myDate = 'today'
+	} else if (target.clearTime() == yesterday) {
+	    myDate = 'yesterday'
+	} else if (target.clearTime() == tomorrow) {
+	    myDate = 'tomorrow'
+	} else if (target.format('yyyy-MM-dd') == '2035-01-01') { // "Infinity" case
+	    myDate = 'a long time from now'
+	    showTime = false
+	} else {
+	    myDate = "on ${target.format('MM-dd')}"
+	}
+	
+	target = new Date(eventDate)
+	String myTime = showTime ? target.format('h:mma').toLowerCase() : ''
+	return myTime ? "${myDate} at ${myTime}" : myDate
 }
 
 
