@@ -47,6 +47,7 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.9	clean up unused methods: componentInitialize()
  * csteele: v1.0.8	initialize state.month2month on child creation.
  * csteele: v1.0.7	editMonths() defaultValue pre-fill corrected.
  * csteele: v1.0.6	Added multiple Rain Sensors and be integrated.
@@ -61,7 +62,7 @@ This code is licensed as follows:
  *
  */
 
-	public static String version()      {  return "v1.0.8"  }
+	public static String version()      {  return "v1.0.9"  }
 
 definition(
 	name: "Sprinkler Schedule Manager",
@@ -384,18 +385,6 @@ def initialize() {
 Helper/Handler functions
 -----------------------------------------------------------------------------
 */
-
-// called by each child when it wants an update of these values.
-def componentInitialize(cd) { 
-	if (!advancedOption) return
-
-	if (state.month2month == null) state.month2month = ["1":"100", "2":"100", "3":"100", "4":"100", "5":"100", "6":"100", "7":"100", "8":"100", "9":"100", "10":"100", "11":"100", "12":"100"]
-	cd.set2Month(state.month2month) 
-	cd.set2DayGroup(state.dayGroup) 
-	if (outdoorTempDevice) { child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) }
-	if (rainDeviceOutdoor) { child.setOutdoorRain(rainDeviceOutdoor, state.currentRainAttribute) }
-}
-
 
 def installCheck(){         
 	state.appInstalled = app.getInstallationState() 
