@@ -47,7 +47,7 @@ This code is licensed as follows:
  *
  *
  *
- * csteele: v1.0.9	clean up unused methods: componentInitialize()
+ * csteele: v1.0.9	clean up unused methods: componentInitialize().
  * csteele: v1.0.8	initialize state.month2month on child creation.
  * csteele: v1.0.7	editMonths() defaultValue pre-fill corrected.
  * csteele: v1.0.6	Added multiple Rain Sensors and be integrated.
