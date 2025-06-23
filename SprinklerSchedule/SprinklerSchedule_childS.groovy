@@ -845,7 +845,7 @@ void updateMyLabel(num) {
 	// Display status as part of the label...
 	String newLabel
 	if (settings.schEnable != true) {
-		newLabel = myLabel + '<span style="color:Crimson"> (paused)</span>'
+		newLabel = myLabel + '<span style="color:Crimson"> (disabled)</span>'
 	} else if (atomicState.isPaused) {
 		newLabel = myLabel + '<span style="color:Crimson"> (paused)</span>'
 	} else if (state.inCycle) {
