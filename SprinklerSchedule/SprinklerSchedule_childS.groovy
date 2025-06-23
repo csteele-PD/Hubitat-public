@@ -47,6 +47,8 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.9	hide page when the Timetable is disabled/inactive.
+ *                       clean up unused methods: initialized(), installed(), uninstalled()
  * csteele: v1.0.8	corrected updateMyLabel().
  * csteele: v1.0.7	initialize state.rainDeviceOutdoor in setOutdoorRain.
  * csteele: v1.0.6	Skip when no valves in a schedule.
@@ -63,7 +65,7 @@ This code is licensed as follows:
  *
  */
  
-	public static String version()      {  return "v1.0.8"  }
+	public static String version()      {  return "v1.0.9"  }
 
 definition(
 	name: "Sprinkler Switch Timetable",
@@ -98,7 +100,7 @@ def main(){
 			}
 	
 			paragraph ""
-				input "schEnable", "bool", title: "Schedule Active?", required: false, defaultValue: true, submitOnChange: true
+				input "schEnable", "bool", title: "<b>Schedule Active?</b>", required: false, defaultValue: true, submitOnChange: true
 				state.paused = schEnable ? false : true
 
 			paragraph "\n<b>Switch Select</b>"
@@ -111,67 +113,69 @@ def main(){
 	
       	}
 	
-		section(menuHeader("Timetable Status & Logging")) {
-			if (valves) {
-				currentMonth = new Date().format("M") 	// Get the current month as a number (1-12)
-				currentMonthPercentage = state.month2month ? state.month2month[currentMonth].toDouble() : 1  // Lookup the percent in month2month or 1 
-			 // provide some feedback on which valves are On
-			 	String str = "<div style='background-color: rgba(73, 163, 125, 0.3);'>"	
-				if (state.month2month) {
-					str += "<b>Adjust valve timing</b> by Month is active. Current month is: <b>$currentMonthPercentage%</b><br>" +
-					"<b>Rain hold</b> is $state.rainHold<br>"
-				}
-				if (state.overTempToday) { str += "Sometime today, the outside temperature exceeded the limit you set of $state.maxOutdoorTemp.<br>" }
-				str += valves?.collect { dev -> "<b>${dev.label ?: dev.name}</b> is ${dev.currentValue('valve', true) == 'on' ? 'On' : 'Off'}"}?.join(', ') ?: ""
-				str += "</div>"
-				paragraph str
-			}
-
-			input "infoEnable", "bool",
-				title: "Enable activity logging",
-				required: false,
-				defaultValue: true, width: 2
-			input "debugEnable", "bool",
-				title: "Enable debug logging", 
-				required: false,
-				defaultValue: false,
-				submitOnChange: true, width: 2
-			
-			if (debugEnable) {
-				input "debugTimeout", "enum", required: false, defaultValue: "0", title: "Automatic debug Log Disable Timeout?", width: 3,  \
-				    	options: [ "0":"None", "1800":"30 Minutes", "3600":"60 Minutes", "86400":"1 Day" ]
-			}
-		}
-		
-		if (valves) {
-			section(menuHeader("Schedule")) {
-		
-				paragraph "<b>Select Days into Groups</b>"
-				paragraph displayDayGroups()		// display day-of-week groups - Section I
-	
-				paragraph "<b>Select Period Settings by Group</b>"
-				paragraph displayTable()		// display groups for scheduling - Section II
-				  displayDuration()
-				  displayStartTime()
-		
-				paragraph "<b>Select Valves into Day Groups</b>"
-				paragraph displayGrpSched()		// display mapping of Valve to DayGroup - Section III
-				  selectDayGroup()
-			
-				if (state.rainDeviceOutdoor != [:]) {
-					def rainVars = ["0": "no rainHold"]
-					state.rainDeviceOutdoor.each { key, info ->
-						rainVars[key] = info.name
+		if (schEnable) {
+			section(menuHeader("Timetable Status & Logging")) {
+				if (valves) {
+					currentMonth = new Date().format("M") 	// Get the current month as a number (1-12)
+					currentMonthPercentage = state.month2month ? state.month2month[currentMonth].toDouble() : 1  // Lookup the percent in month2month or 1 
+				 // provide some feedback on which valves are On
+				 	String str = "<div style='background-color: rgba(73, 163, 125, 0.3);'>"	
+					if (state.month2month) {
+						str += "<b>Adjust valve timing</b> by Month is active. Current month is: <b>$currentMonthPercentage%</b><br>" +
+						"<b>Rain hold</b> is $state.rainHold<br>"
 					}
-					input "rainEnableDevice", "enum", 
-						title: "<b>Choose the Rain Sensor for this Timetable</b><p><i>leave unselected for no Rain Hold</i></p>", 
-						submitOnChange: true, 
-						defaultValue: "0",
-						options: rainVars
+					if (state.overTempToday) { str += "Sometime today, the outside temperature exceeded the limit you set of $state.maxOutdoorTemp.<br>" }
+					str += valves?.collect { dev -> "<b>${dev.label ?: dev.name}</b> is ${dev.currentValue('valve', true) == 'on' ? 'On' : 'Off'}"}?.join(', ') ?: ""
+					str += "</div>"
+					paragraph str
 				}
-
-				paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
-		    }
+	
+				input "infoEnable", "bool",
+					title: "Enable activity logging",
+					required: false,
+					defaultValue: true, width: 2
+				input "debugEnable", "bool",
+					title: "Enable debug logging", 
+					required: false,
+					defaultValue: false,
+					submitOnChange: true, width: 2
+				
+				if (debugEnable) {
+					input "debugTimeout", "enum", required: false, defaultValue: "0", title: "Automatic debug Log Disable Timeout?", width: 3,  \
+					    	options: [ "0":"None", "1800":"30 Minutes", "3600":"60 Minutes", "86400":"1 Day" ]
+				}
+			}
+			
+			if (valves) {
+				section(menuHeader("Schedule")) {
+			
+					paragraph "<b>Select Days into Groups</b>"
+					paragraph displayDayGroups()		// display day-of-week groups - Section I
+		
+					paragraph "<b>Select Period Settings by Group</b>"
+					paragraph displayTable()		// display groups for scheduling - Section II
+					  displayDuration()
+					  displayStartTime()
+			
+					paragraph "<b>Select Valves into Day Groups</b>"
+					paragraph displayGrpSched()		// display mapping of Valve to DayGroup - Section III
+					  selectDayGroup()
+				
+					if (state.rainDeviceOutdoor != [:]) {
+						def rainVars = ["0": "no rainHold"]
+						state.rainDeviceOutdoor.each { key, info ->
+							rainVars[key] = info.name
+						}
+						input "rainEnableDevice", "enum", 
+							title: "<b>Choose the Rain Sensor for this Timetable</b><p><i>leave unselected for no Rain Hold</i></p>", 
+							submitOnChange: true, 
+							defaultValue: "0",
+							options: rainVars
+					}
+	
+					paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
+			    }
+			}
 		}
 	}
 }
@@ -532,20 +536,6 @@ Standard handlers, and mode-change handler
 -----------------------------------------------------------------------------
 */
 
-def initialize() {		// unused?
-	logDebug "initialize()"
-	unsubscribe()
-	init()
-	update()
-}
-
-
-def installed() {
-	logDebug "installed()"
-	parent?.componentInitialize(this.device)
-}
-
-
 def updated() {
 	logDebug "updated()"
 	unschedule (logsOff)
@@ -557,11 +547,6 @@ def updated() {
 def update() {
 	updateMyLabel(2)
 	scheduleNext()
-}
-
-
-def uninstalled() {
-	logDebug "uninstalled()"
 }
 
 
@@ -853,13 +838,15 @@ def buildTimings(cronDayOf) {
 void updateMyLabel(num) {
 	String flag = '<span '
 	String myLabel = app.label
-	if (app.label?.contains(flag)) { ///atomicState.appDisplayName.contains(flag)) {
+	if (app.label?.contains(flag)) { 
 		myLabel = app.label.substring(0, app.label.indexOf(flag))// ?: atomicState.appDisplayName
 	}
 
 	// Display status as part of the label...
 	String newLabel
-	if (atomicState.isPaused) {
+	if (settings.schEnable != true) {
+		newLabel = myLabel + '<span style="color:Crimson"> (paused)</span>'
+	} else if (atomicState.isPaused) {
 		newLabel = myLabel + '<span style="color:Crimson"> (paused)</span>'
 	} else if (state.inCycle) {
 		String beganAt = atomicState.cycleStart ? "started " + fixDateTimeString(atomicState.cycleStart) : 'running'
