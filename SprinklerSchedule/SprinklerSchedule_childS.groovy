@@ -49,6 +49,7 @@ This code is licensed as follows:
  *
  * csteele: v1.0.9	hide page when the Timetable is disabled/inactive.
  *                       clean up unused methods: initialized(), installed(), uninstalled()
+ *				 refactored logging into using closures.
  * csteele: v1.0.8	corrected updateMyLabel().
  * csteele: v1.0.7	initialize state.rainDeviceOutdoor in setOutdoorRain.
  * csteele: v1.0.6	Skip when no valves in a schedule.
@@ -112,7 +113,7 @@ def main(){
       	        submitOnChange: true
 	
       	}
-	
+
 		if (schEnable) {
 			section(menuHeader("Timetable Status & Logging")) {
 				if (valves) {
@@ -194,7 +195,7 @@ String displayDayGroups() {	// display day-of-week groups - Section I
 		dgI = state.dayGroupBtn.substring(1);   // dayGroupBtn value (mon-sun)
 		state.dayGroup["$dgK"]["$dgI"] = !state.dayGroup["$dgK"]["$dgI"] // Toggle state
 		state.remove("dayGroupBtn") // only once 
-		logDebug "displayDayGroups Item: $dgK.$dgI"
+		logDebug {"displayDayGroups Item: $dgK.$dgI"}
 	}
 	if(state.overTempBtn) {			// toggle the overTemp checkmarks 
 		dgK = state.overTempBtn[0].toInteger() - incM // overTempBtn Key
@@ -412,7 +413,7 @@ def addDayGroup(evt = null) {
     def dayGroupSize = state.dayGroup.size() // More efficient
     def newIndex = (dayGroupSize + 1).toString() // Ensures key consistency
 
-    logDebug "Adding another dayGroup map: $newIndex"
+    logDebug {"Adding another dayGroup map: $newIndex"}
     state.dayGroup[newIndex] = dayGroupTemplate.clone() // Clone to avoid reference issues
 }
 
@@ -422,7 +423,7 @@ def remDayGroup(evt = null) {  	// remove a Local dayGroup & dayGroupSettings
 	if (dayGroupSize > 1) {
 		// Determine the key to delete
 		keyToDelete = (evt.toInteger() - (state.dayGroupMaster ?: [:]).size()).toString()		
-		logDebug "remove another dayGroup map: $dayGroupSize, $keyToDelete, evt:$evt"
+		logDebug {"remove another dayGroup map: $dayGroupSize, $keyToDelete, evt:$evt"}
 		if (state.dayGroup.containsKey(keyToDelete)) { state.dayGroup.remove(keyToDelete) } 
 		// Re-map keys to be sequential
 		def dayGrpReOrder = [:]
@@ -517,16 +518,16 @@ Logging output
 -----------------------------------------------------------------------------
 */
 
-def logDebug(msg) {
-	if (settings.debugEnable) { log.debug msg }
+void logDebug(Closure msg) {
+    if (settings.debugEnable) { log.debug "${msg()}" }
 }
 
-def logWarn(msg) { 
-	log.warn msg
+def logWarn(Closure msg) { 
+	log.warn "${msg()}"
 }
 
-def logInfo(msg) {
-    if (settings.infoEnable) { log.info msg }
+def logInfo(Closure msg) {
+    if (settings.infoEnable) { log.info "${msg()}" }
 }
 
 
@@ -537,7 +538,7 @@ Standard handlers, and mode-change handler
 */
 
 def updated() {
-	logDebug "updated()"
+	logDebug {"updated()"}
 	unschedule (logsOff)
 	if (debugEnable && debugTimeout.toInteger() >0) runIn(debugTimeout.toInteger(), logsOff)
 	update()
@@ -552,13 +553,13 @@ def update() {
 
 def set2Month(monthIn) { 
 	state.month2month = monthIn
-	logInfo "MonthIn update from Parent."
+	logInfo {"MonthIn update from Parent."}
 }
 
 
 def set2DayGroup(dayGroupIn) { 
 	masterGroupMerge(dayGroupIn)
-	logInfo "DayGroup update from Parent."
+	logInfo {"DayGroup update from Parent."}
 }
 
 def setOutdoorTemp(aTempDevice, dTemp) {
@@ -566,7 +567,7 @@ def setOutdoorTemp(aTempDevice, dTemp) {
 	state.maxOutdoorTemp = dTemp
 	def tempNow = aTempDevice.currentValue("temperature")
 	state.overTempToday = ( tempNow > state.maxOutdoorTemp.toInteger() ) ? true : false
-	logInfo "OutdoorTemp update from Parent, tempNow: $tempNow." 
+	logInfo {"OutdoorTemp update from Parent, tempNow: $tempNow."} 
 	unsubscribe(recvOutdoorTempHandler)
 	subscribe(aTempDevice, "temperature", recvOutdoorTempHandler)
 }
@@ -582,7 +583,7 @@ def setOutdoorRain(aRainDevice, rainAttr) {
             	value: ard.currentValue(rainAttr),
             	name : ms1
 		]
-		logInfo "OutdoorRain update from Parent, $ms1: ${ard.currentValue(rainAttr)}"
+		logInfo {"OutdoorRain update from Parent, $ms1: ${ard.currentValue(rainAttr)}"}
 		subscribe(ard, rainAttr, recvOutdoorRainHandler)
 	}
 	state.rainHold = rainEnableDevice && rainEnableDevice != "0" && state.rainDeviceOutdoor[rainEnableDevice]?.value.toLowerCase() == "wet"
@@ -592,7 +593,7 @@ def setOutdoorRain(aRainDevice, rainAttr) {
 def recvOutdoorTempHandler(evt) {
 	if (!state.overTempToday) { 	// if the temp goes over the limit, latch 'true' state til midnight reset
 		state.overTempToday = new BigDecimal(evt.value) > new BigDecimal(state.maxOutdoorTemp) //  true : false 
-		logDebug "OutdoorTemp update from Device. overTempToday: $state.overTempToday"
+		logDebug {"OutdoorTemp update from Device. overTempToday: $state.overTempToday"}
 	}
 }
 
@@ -604,7 +605,7 @@ def recvOutdoorRainHandler(evt) {
             	name : evt?.displayName
 		]
 		state.rainHold = evt.value.toLowerCase() == "wet"
-		logDebug "OutdoorRain update from Device. rainHold: $state.rainHold"
+		logDebug {"OutdoorRain update from Device. rainHold: $state.rainHold"}
 	}
 }
 
@@ -617,7 +618,7 @@ def installCheck(){
 		section{paragraph "Please hit 'Done' to Complete the install."}
 	}
 	else{
-		logDebug "$app.name is Installed Correctly"
+		logDebug {"$app.name is Installed Correctly"}
 	}
 }
 
@@ -673,30 +674,30 @@ def scheduleNext() {
 	}
 	hasZero = state.dayGroupMerge.any { key, value -> value.any { it.value.toString() == "0" } } || state.valves?.isEmpty()
 	if (hasZero) {
-		logWarn "Please set Time and Duration"
+		logWarn {"Please set Time and Duration"}
 		return
 	}
 	
 	unschedule(reschedule)
 	schedule('7 7 0 ? * *', reschedule) // reschedule the midnight run to schedule that day's work.
 
-	logInfo "Checking $myLabel Schedule."
+	logInfo {"Checking $myLabel Schedule."}
 	Calendar calendar = Calendar.getInstance();
 	def cronDay = calendar.get(Calendar.DAY_OF_WEEK);
 
 	timings = buildTimings(cronDay)
 	if (!timings) {
- 		logWarn "Nothing scheduled for $myLabel Today."
+ 		logWarn {"Nothing scheduled for $myLabel Today."}
 		return
 	}
 	
 	if (!schEnable) {
-		logWarn "Schedule Paused for $myLabel."
+		logWarn {"Schedule Paused for $myLabel."}
 		return
 	}
 
 	if (state.rainHold && rainEnableDevice && rainEnableDevice != "0") {
-		logWarn "Rain Hold possible for $myLabel Today."
+		logWarn {"Rain Hold possible for $myLabel Today."}
 	}
 
 	Date date = new Date()
@@ -710,13 +711,13 @@ def scheduleNext() {
 	    hasSched = true
 	    break;	// quit the for loop on a schedule of first startTime that's in the future.
 	}
-	logDebug "schedule('0 $stm $sth ? * *', schedHandler, [data: ['dKey': $sk]]), hasSched: $hasSched"
+	logDebug {"schedule('0 $stm $sth ? * *', schedHandler, [data: ['dKey': $sk]]), hasSched: $hasSched"}
 	if (hasSched) { 
 		schedule("0 ${stm} ${sth} ? * *", schedHandler, [data: ["dKey":"$sk"]]) 
-		logInfo "$myLabel scheduled today."
+		logInfo {"$myLabel scheduled today."}
 	}
 	else {
-		logInfo "Nothing scheduled for $myLabel today."
+		logInfo {"Nothing scheduled for $myLabel today."}
 	}
 }
 
@@ -733,36 +734,36 @@ def schedHandler(data) {
 	if (app.label.contains('<span ')) {
 		myLabel = app.label.substring(0, app.label.indexOf('<span '))
 	}
-	logInfo "Running $myLabel Schedule."
+	logInfo {"Running $myLabel Schedule."}
 	cd = data["dKey"] as String
 	duraT = state.dayGroupMerge."$cd".duraTime
 
 	// if the schedule to be run is an 'ot' (overTemp) and today doesn't have an overTemp, then skip
 	if(state.dayGroupMerge[cd].ot && !state.overTempToday) {
-		logInfo "No Over Temperature today, skipping."
+		logInfo {"No Over Temperature today, skipping."}
 		runIn(60, scheduleNext)			// find and then schedule the next startTime for today
 		return
 	}
 	
 	if (duraT == 0) {
-		logInfo "Duration of 0, skipping."
+		logInfo {"Duration of 0, skipping."}
 		runIn(60, scheduleNext)			// find and then schedule the next startTime for today
 		return	
 	}
 
 	if (rainEnableDevice && rainEnableDevice != "0" && state.rainDeviceOutdoor[rainEnableDevice]?.value?.toLowerCase() == "wet") { 
-		logWarn "Rain Hold - schedule skipped for $myLabel Today."
+		logWarn {"Rain Hold - schedule skipped for $myLabel Today."}
 		runIn(60, scheduleNext)			// find and then schedule the next startTime for today
 		return
 	}	
 
 	valve2start = state.valves.findAll { it.value.dayGroup.contains(cd) }.keySet()
 	if (!valve2start) {
-		logInfo "No Switch in Day Group."
+		logInfo {"No Switch in Day Group."}
 		runIn(60, scheduleNext)			// find and then schedule the next startTime for today
 		return
 	}
-	logDebug "schedHandler: $cd, $state.dayGroupMerge, valve2start: $valve2start" 
+	logDebug {"schedHandler: $cd, $state.dayGroupMerge, valve2start: $valve2start"} 
 
 	vk = valve2start[0] as String
 	if (vk != null) {
@@ -772,7 +773,7 @@ def schedHandler(data) {
    	currentValve = settings.valves?.find{it.id == "$vk"}
 	// some valves need turning on for their duration.
 	currentValve?.on()
-	logInfo "Valve switch ${currentValve?.label ?: currentValve?.name} on."
+	logInfo {"Valve switch ${currentValve?.label ?: currentValve?.name} on."}
 	state.inCycle = true
 	atomicState.cycleStart = now()
 	updateMyLabel(3)
@@ -782,7 +783,7 @@ def schedHandler(data) {
 	currentMonthPercentage = state.month2month ? state.month2month[currentMonth].toDouble() / 100 : 1  // Lookup the percent in month2month or 1 
 	dura = 60 * duraT * currentMonthPercentage		// duraTime is in minutes, runIn is in seconds
 	duraSeconds = Math.max(dura.toInteger(), 20) // Ensure minimum valve timing of 20 seconds
-	logDebug "runIn($duraSeconds, scheduleDurationHandler, [vKey: $vk, dS: $duraSeconds, dV: $valve2start])"
+	logDebug {"runIn($duraSeconds, scheduleDurationHandler, [vKey: $vk, dS: $duraSeconds, dV: $valve2start])"}
 
  	runIn(duraSeconds, scheduleDurationHandler, [data: [vKey: "$vk", dS: "$duraSeconds", dV: "$valve2start"]]) 
 }
@@ -793,12 +794,12 @@ def scheduleDurationHandler(data) {
 	cd = data.vKey as String
 	duraSeconds = data.dS.toInteger()
 	valve2start = data.dV as String
-	logDebug "schedDurHandler: valveStop: $data.vKey, in Duration: $duraSeconds, next: $valve2start"
+	logDebug {"schedDurHandler: valveStop: $data.vKey, in Duration: $duraSeconds, next: $valve2start"}
 
    	currentValve = settings.valves?.find{it.id == "$cd"}
 	// stop the valve and start the next, if any.
 	currentValve?.off()
-	logInfo "Valve switch ${currentValve?.label ?: currentValve?.name} off."
+	logInfo {"Valve switch ${currentValve?.label ?: currentValve?.name} off."}
 
 	//valves*.close()	// close all the valves
     
@@ -812,7 +813,7 @@ def scheduleDurationHandler(data) {
 			valve2start = valve2start.tail()
 			currentValve = settings.valves?.find{it.id == "$vk"}
 			currentValve?.on()
-			logInfo "Valve switch ${currentValve?.label ?: currentValve?.name} on."
+			logInfo {"Valve switch ${currentValve?.label ?: currentValve?.name} on."}
 
 			runIn(duraSeconds, scheduleDurationHandler, [data: [vKey: "$vk", dS: "$duraSeconds", dV: "$valve2start"]])
 		}
@@ -839,13 +840,13 @@ void updateMyLabel(num) {
 	String flag = '<span '
 	String myLabel = app.label
 	if (app.label?.contains(flag)) { 
-		myLabel = app.label.substring(0, app.label.indexOf(flag))// ?: atomicState.appDisplayName
+		myLabel = app.label.substring(0, app.label.indexOf(flag))
 	}
 
 	// Display status as part of the label...
 	String newLabel
 	if (settings.schEnable != true) {
-		newLabel = myLabel + '<span style="color:Crimson"> (disabled)</span>'
+		newLabel = myLabel + '<span style="color:Crimson"> (inactive)</span>'
 	} else if (atomicState.isPaused) {
 		newLabel = myLabel + '<span style="color:Crimson"> (paused)</span>'
 	} else if (state.inCycle) {
@@ -890,7 +891,7 @@ String fixDateTimeString(eventDate) {
 
 
 def logsOff() {
-	logWarn "debug logging Disabled..."
+	logWarn {"debug logging Disabled..."}
 	app?.updateSetting("debugEnable",[value:"false",type:"bool"])
 }
 
