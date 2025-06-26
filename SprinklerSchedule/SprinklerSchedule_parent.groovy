@@ -47,7 +47,8 @@ This code is licensed as follows:
  *
  *
  *
- * csteele: v1.0.9	clean up unused methods: componentInitialize().
+ * csteele: v1.0.9	clean up unused methods: componentInitialize()
+ *				 refactored logging into using closures.
  * csteele: v1.0.8	initialize state.month2month on child creation.
  * csteele: v1.0.7	editMonths() defaultValue pre-fill corrected.
  * csteele: v1.0.6	Added multiple Rain Sensors and be integrated.
@@ -354,13 +355,13 @@ Standard Hubitat App methods
 */
 
 def installed() {
-	logInfo "Installed with settings."//": ${settings}"
+	logInfo {"Installed with settings."}//": ${settings}"}
 	initialize()
 }
 
 
 def updated() {
-	logInfo "Updated with settings."//": ${settings}"
+	logInfo {"Updated with settings."}//": ${settings}"}
 	childApps.each {child ->
 		child.set2Month(state.month2month) 
 		child.set2DayGroup(state.dayGroup) 
@@ -373,9 +374,9 @@ def updated() {
 def initialize() {
 	// nothing needed here, since the child apps will handle preferences/subscriptions
 	// this just logs some messages for demo/information purposes
-	logInfo "there are ${childApps.size()} child smartapps"
+	logInfo {"there are ${childApps.size()} child smartapps"}
 	childApps.each {child ->
-		logInfo "child app: ${child.label}"
+		logInfo {"child app: ${child.label}"}
 	}
 }
 
@@ -385,24 +386,14 @@ def initialize() {
 Helper/Handler functions
 -----------------------------------------------------------------------------
 */
-
-def installCheck(){         
+def installCheck(){      
 	state.appInstalled = app.getInstallationState() 
 	if(state.appInstalled != 'COMPLETE'){
 		section{paragraph "Please hit 'Done' to install '${app.label}'"}
 	}
 	else{
-		logInfo "$app.name is Installed Correctly"
+		logInfo {"$app.name is Installed Correctly"}
 	}
-}
-
-
-def logDebug(msg) { // allows either log.debug or logDebug like the Child code.
-	log.debug msg
-}
-
-def logInfo(msg) { // allows either log.info or logInfo like the Child code.
-	log.info msg
 }
 
 def getFormat(type, myText=""){            // Modified from @Stephack Code
@@ -438,6 +429,21 @@ void appButtonHandler(btn) {
 	else if ( btn == "addDGBtn")            addDayGroup()
 	else if ( btn.startsWith("rem")      )  remDayGroup(btn.minus("rem")) 
 	else if ( btn.startsWith("w")        )  state.dayGroupBtn = btn.minus("w")
+}
+
+
+/*
+-----------------------------------------------------------------------------
+Logging output
+-----------------------------------------------------------------------------
+*/
+
+void logDebug(Closure msg) {
+    if (settings.debugEnable) { log.debug "${msg()}" }
+}
+
+void logInfo(Closure msg) {
+    if (settings.infoEnable) { log.info "${msg()}" }
 }
 
 
