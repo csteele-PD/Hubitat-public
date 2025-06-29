@@ -112,17 +112,13 @@ def mainPage() {
 			input name: "quickref", type: "hidden", title:"<a href='https://www.hubitatcommunity.com/QuikRef/sprinklerScheduleManagerInfo/index.html' target='_blank'>Quick Reference ${version()}</a>"
 		}
 		if (advancedOption) {
-			  section(menuHeader("Advanced Options Page"))
-			  {
-			  	href "advancedPage", title: "Advanced Options", required: false
-			  }
-			  // Send the current Maps to each Child, exactly like an Update-from-Done would do.
-			  childApps.each {child ->
-			  	child.set2Month(state.month2month) 
-			  	child.set2DayGroup(state.dayGroup) 
-				if (outdoorTempDevice) { child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) }
-				if (rainDeviceOutdoor) { child.setOutdoorRain(rainDeviceOutdoor, state.currentRainAttribute) }
-			  }
+			section(menuHeader("Advanced Options Page"))
+			{
+				advDescription = 'Valve Timing by Month, Master Groups, Temperature and Rain Devices'
+				href "advancedPage", title: "Advanced Options", required: false, description: advDescription, state: "complete"
+			}
+			// Send the current Maps to each Child, exactly like an Update-from-Done would do.
+			childSetStates()
 		}
 	}
 }
@@ -198,7 +194,7 @@ String displayDayGroups() {	// display day-of-week groups
 	if(state.dayGroup == null) state.dayGroup = ['1': ['1':true, '2':true, '3':true, '4':true, '5':true, '6':true, '7':true, "s": "P", "name": "", "ot": false, "ra": false, "duraTime": null, "startTime": null ] ] // initial row
 	if(state.dayGroupBtn) {
 		String dgK = state.dayGroupBtn.substring(0, 1); // dayGroupBtn Key (row)
-		String dgI = state.dayGroupBtn.substring(1);   // dayGroupBtn value (mon-sun)
+		String dgI = state.dayGroupBtn.substring(1);    // dayGroupBtn value (mon-sun)
 
 		state.dayGroup."$dgK"."$dgI" = state.dayGroup."$dgK"."$dgI" ? false : true // toggle the state.
 		state.remove("dayGroupBtn") // only once 
@@ -362,12 +358,7 @@ def installed() {
 
 def updated() {
 	logInfo {"Updated with settings."}//": ${settings}"}
-	childApps.each {child ->
-		child.set2Month(state.month2month) 
-		child.set2DayGroup(state.dayGroup) 
-		if (outdoorTempDevice) { child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) }
-		if (rainDeviceOutdoor) { child.setOutdoorRain(rainDeviceOutdoor, state.currentRainAttribute) }
-	}
+	childSetStates()
 }
 
 
@@ -431,6 +422,15 @@ void appButtonHandler(btn) {
 	else if ( btn.startsWith("w")        )  state.dayGroupBtn = btn.minus("w")
 }
 
+
+void childSetStates() {
+	childApps.each {child ->
+		child.set2Month(state.month2month) 
+		child.set2DayGroup(state.dayGroup) 
+		if (outdoorTempDevice) { child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) }
+		if (rainDeviceOutdoor) { child.setOutdoorRain(rainDeviceOutdoor, state.currentRainAttribute) }
+	}
+}
 
 /*
 -----------------------------------------------------------------------------
