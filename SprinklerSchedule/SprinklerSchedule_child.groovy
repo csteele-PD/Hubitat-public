@@ -104,7 +104,7 @@ def main(){
 				atomicState.appDisplayName = myLabel
 				app.updateLabel(myLabel)
 			}
-	
+
 			paragraph ""
 				input "schEnable", "bool", title: "<b>Schedule Active?</b>", required: false, defaultValue: true, submitOnChange: true
 				state.paused = schEnable ? false : true
@@ -116,7 +116,7 @@ def main(){
       	        multiple: true,
       	        required: false,
       	        submitOnChange: true
-	
+
       	}
 
 		if (schEnable) {
@@ -135,7 +135,7 @@ def main(){
 					str += "</div>"
 					paragraph str
 				}
-	
+
 				input "infoEnable", "bool",
 					title: "Enable activity logging",
 					required: false,
@@ -145,28 +145,28 @@ def main(){
 					required: false,
 					defaultValue: false,
 					submitOnChange: true, width: 2
-				
+
 				if (debugEnable) {
 					input "debugTimeout", "enum", required: false, defaultValue: "0", title: "Automatic debug Log Disable Timeout?", width: 3,  \
 					    	options: [ "0":"None", "1800":"30 Minutes", "3600":"60 Minutes", "86400":"1 Day" ]
 				}
 			}
-			
+
 			if (valves) {
 				section(menuHeader("Schedule")) {
-			
+
 					paragraph "<b>Select Days into Groups</b>"
 					paragraph displayDayGroups()		// display day-of-week groups - Section I
-		
+
 					paragraph "<b>Select Period Settings by Group</b>"
 					paragraph displayTable()		// display groups for scheduling - Section II
 					  displayDuration()
 					  displayStartTime()
-			
+
 					paragraph "<b>Select Valves into Day Groups</b>"
 					paragraph displayGrpSched()		// display mapping of Valve to DayGroup - Section III
 					  selectDayGroup()
-				
+
 					if (state.rainDeviceOutdoor != [:]) {
 						def rainVars = ["0": "no rainHold"]
 						state.rainDeviceOutdoor.each { key, info ->
@@ -178,9 +178,9 @@ def main(){
 							defaultValue: "0",
 							options: rainVars
 					}
-	
+
 					paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
-			    }
+				}
 			}
 		}
 	}
@@ -209,7 +209,7 @@ String displayDayGroups() {	// display day-of-week groups - Section I
 	}
 
 	masterGroupMerge()	// merge or riffle merge if there's a new mMap from Parent.
-	
+
 	String str = "<script src='https://code.iconify.design/iconify-icon/1.0.0/iconify-icon.min.js'></script>"
 	str += "<style>.mdl-data-table tbody tr:hover{background-color:inherit} .tstat-col td,.tstat-col th { padding:8px 8px;text-align:center;font-size:12px} .tstat-col td {font-size:15px }" +
 		"</style><div style='overflow-x:auto'><table class='mdl-data-table tstat-col' style=';border:2px solid black'>" +
@@ -445,9 +445,8 @@ def remDayGroup(evt = null) {  	// remove a Local dayGroup & dayGroupSettings
 def masterGroupMerge(masterDayGroupIn = [:]) { // lots of deep copies of hashMaps
 	// three part merge. Part 1: Decide which incoming "Master" is to be used and clone the days-of-week fields.
 	def dayGroupMaster = [:]
-	state.dayGroupMaster.each { k, v ->
- 		dayGroupMaster[k] = v.clone() // deep copy
-	}
+	state.dayGroupMaster.each { k, v -> dayGroupMaster[k] = v.clone() } // deep copy (state vs local scope)
+
  	def dayGroupMerge = masterDayGroupIn ? masterDayGroupIn.collectEntries { k, v -> [k, v.clone()] }  : dayGroupMaster.collectEntries { k, v -> [k, v.clone()] }  ?: [:] // deep copy
 
 	//  Part 2: overwrite setTime, DuraTime, name, ot and ra values from the child for the Master records. 
@@ -488,15 +487,15 @@ String noButtonLink(String btnName, String linkText, color = "#1A77C9", font = "
 
 void appButtonHandler(btn) {
 	// only one button can be pressed, remove their states, since "btn" contains the only valid one.
-	state.remove("duraTimeBtn") 
-	state.remove("dayGrpBtn")
-	state.remove("startTimeBtn")
 	state.remove("dayGroupBtn")
-	state.remove("overTempBtn")
+	state.remove("dayGrpBtn")
 	state.remove("doneTime")
+	state.remove("duraTimeBtn") 
 	state.remove("eraseTime")
-		app.removeSetting("StartTime") 
-		app.removeSetting("DuraTime") 
+	state.remove("overTempBtn")
+	state.remove("startTimeBtn")
+	app.removeSetting("StartTime") 
+	app.removeSetting("DuraTime") 
 
 	if      ( btn == "btnSchEna")           toggleEnaSchBtn()
 	else if ( btn == "addDGBtn")            addDayGroup()
@@ -695,7 +694,7 @@ def scheduleNext() {
  		logWarn {"Nothing scheduled for $myLabel Today."}
 		return
 	}
-	
+
 	if (!schEnable) {
 		logWarn {"Schedule Paused for $myLabel."}
 		return
@@ -707,7 +706,7 @@ def scheduleNext() {
 
 	Date date = new Date()
 	String akaNow = date.format("HH:mm")
-		
+
 	hasSched = false
 	for (timN in timings) {
 	    sk = timN.key			// index into dayGroupMerge for Duration
@@ -749,7 +748,7 @@ def schedHandler(data) {
 		runIn(60, scheduleNext)			// find and then schedule the next startTime for today
 		return
 	}
-	
+
 	if (duraT == 0) {
 		logInfo {"Duration of 0, skipping."}
 		runIn(60, scheduleNext)			// find and then schedule the next startTime for today
@@ -782,7 +781,7 @@ def schedHandler(data) {
 	state.inCycle = true
 	atomicState.cycleStart = now()
 	updateMyLabel(3)
-    
+
 	duraT = state.dayGroupMerge."$cd".duraTime
 	currentMonth = new Date().format("M") 	// Get the current month as a number (1-12)
 	currentMonthPercentage = state.month2month ? state.month2month[currentMonth].toDouble() / 100 : 1  // Lookup the percent in month2month or 1 
@@ -806,9 +805,6 @@ def scheduleDurationHandler(data) {
 	currentValve?.close()
 	logInfo {"Valve ${currentValve?.label ?: currentValve?.name} closed."}
 
-	//valves*.close()	// close all the valves
-    
-	// add an interstitial delay to allow the valves to close and recover before opening next.
 	pauseExecution(20000)	// 20 seconds between off and the next on
 
 	if (valve2start != '[]') {
@@ -832,38 +828,35 @@ def scheduleDurationHandler(data) {
 
 
 def buildTimings(cronDayOf) {
-	def aWeek = [1:'7', 2:'1', 3:'2', 4:'3', 5:'4', 6:'5', 7:'6']
+	Map aWeek = [1:'7', 2:'1', 3:'2', 4:'3', 5:'4', 6:'5', 7:'6']
 	// cronDayOf week is 1-7 where 1 = sunday and 7 = saturday. BUT this app uses 1 as Monday, sunday is 7
 	def result = state.dayGroupMerge.findAll { key, value -> value[aWeek[cronDayOf]] == true }.keySet()
-	// timings = result.collectEntries { key -> [(key): state.dayGrouptimings[key]]
 	def results = result.collect { key -> [key: key, duraTime: state.dayGroupMerge[key]?.duraTime, startTime: state.dayGroupMerge[key]?.startTime]}.findAll { it.startTime != null }.sort { it.startTime } // Sort by startTime
 	// [[key:2, duraTime:5.0, startTime:06:00]]
 }
 
 
 void updateMyLabel(num) {
-	String flag = '<span '
-	String myLabel = app.label
-	if (app.label?.contains(flag)) { 
-		myLabel = app.label.substring(0, app.label.indexOf(flag))
+	String baseLabel = app.label?.with { 
+		def flag = '<span '
+		contains(flag) ? substring(0, indexOf(flag)) : it
+	} ?: ""
+
+	String status = ""
+	if (settings.schEnable != true) {
+		status = '<span style="color:Crimson"> (inactive)</span>'
+	} else if (atomicState.isPaused) {
+		status = '<span style="color:Crimson"> (paused)</span>'
+	} else if (state.inCycle) {
+		def beganAt = atomicState.cycleStart ? "started ${fixDateTimeString(atomicState.cycleStart)}" : "running"
+		status = "<span style=\"color:Green\"> (${beganAt})</span>"
+	} else if (state.inCycle != null && !state.inCycle) {
+		def endedAt = atomicState.cycleEnd ? "finished ${fixDateTimeString(atomicState.cycleEnd)}" : "idle"
+		status = "<span style=\"color:Green\"> (${endedAt})</span>"
 	}
 
-	// Display status as part of the label...
-	String newLabel
-	if (settings.schEnable != true) {
-		newLabel = myLabel + '<span style="color:Crimson"> (inactive)</span>'
-	} else if (atomicState.isPaused) {
-		newLabel = myLabel + '<span style="color:Crimson"> (paused)</span>'
-	} else if (state.inCycle) {
-		String beganAt = atomicState.cycleStart ? "started " + fixDateTimeString(atomicState.cycleStart) : 'running'
-		newLabel = myLabel + "<span style=\"color:Green\"> (${beganAt})</span>"
-	} else if ((state.inCycle != null) && (state.inCycle == false)) {
-		String endedAt = atomicState.cycleEnd ? "finished " + fixDateTimeString(atomicState.cycleEnd) : 'idle'
-		newLabel = myLabel + "<span style=\"color:Green\"> (${endedAt})</span>"
-	} else {
-		newLabel = myLabel
-	}
-	if (myLabel != newLabel) app.updateLabel(newLabel)
+	String newLabel = baseLabel + status
+	if (app.label != newLabel) { app.updateLabel(newLabel) }
 }
 
 
@@ -872,10 +865,10 @@ String fixDateTimeString(eventDate) {
 	def today = new Date().clearTime()
 	def yesterday = new Date(today.time - 1 * 24 * 60 * 60 * 1000) // Subtract 1 day
 	def tomorrow = new Date(today.time + 1 * 24 * 60 * 60 * 1000) // Add 1 day
-	
+
 	String myDate = ''
 	boolean showTime = true
-	
+
 	if (target.clearTime() == today) {
 	    myDate = 'today'
 	} else if (target.clearTime() == yesterday) {
@@ -888,7 +881,7 @@ String fixDateTimeString(eventDate) {
 	} else {
 	    myDate = "on ${target.format('MM-dd')}"
 	}
-	
+
 	target = new Date(eventDate)
 	String myTime = showTime ? target.format('h:mma').toLowerCase() : ''
 	return myTime ? "${myDate} at ${myTime}" : myDate
