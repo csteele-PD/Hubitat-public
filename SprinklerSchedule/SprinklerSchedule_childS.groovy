@@ -47,6 +47,7 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.10	remove entries from state.valves that aren't in valves.
  * csteele: v1.0.9	hide page when the Timetable is disabled/inactive.
  *                       clean up unused methods: initialized(), installed(), uninstalled()
  *				 refactored logging into using closures.
@@ -66,7 +67,7 @@ This code is licensed as follows:
  *
  */
  
-	public static String version()      {  return "v1.0.9"  }
+	public static String version()      {  return "v1.0.10"  }
 
 definition(
 	name: "Sprinkler Switch Timetable",
@@ -125,7 +126,7 @@ def main(){
 						str += "<b>Adjust valve timing</b> by Month is active. Current month is: <b>$currentMonthPercentage%</b><br>" +
 						"<b>Rain hold</b> is $state.rainHold<br>"
 					}
-					if (state.overTempToday) { str += "Sometime today, the outside temperature exceeded the limit you set of $state.maxOutdoorTemp.<br>" }
+					if (state.overTempToday) { str += "Sometime today, the outside temperature <b>exceeded</b> the limit you set of $state.maxOutdoorTemp and any Over Temp schedules <b>will run.</b><br>" }
 					str += valves?.collect { dev -> "<b>${dev.label ?: dev.name}</b> is ${dev.currentValue('valve', true) == 'on' ? 'On' : 'Off'}"}?.join(', ') ?: ""
 					str += "</div>"
 					paragraph str
@@ -325,9 +326,9 @@ String displayGrpSched() {	// display mapping of Valve to DayGroup - Section III
 		"<th>Day Group</th>" +
 		"</tr></thead>"
 
+	state.valves.keySet().findAll { k -> !(k in valves.id) }.each { k -> state.valves.remove(k) }
 	valves?.sort{it.displayName.toLowerCase()}.each {
 	     dev ->
-		  dx = state.valves[dev.id].dayGroupMerge
 		  String devLink = "<a href='/device/edit/$dev.id' target='_blank' title='Open Device Page for $dev'>$dev"
 		  String myDG = state.valves[dev.id].dayGroup
 		  String myDayGroup = myDG ? buttonLink("r$dev.id", myDG, "purple") : buttonLink("r$dev.id", "Select", "green")
