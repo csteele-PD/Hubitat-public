@@ -47,6 +47,7 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.10	cosmetic remove Horz Rule
  * csteele: v1.0.9	clean up unused methods: componentInitialize()
  *				 refactored logging into using closures.
  * csteele: v1.0.8	initialize state.month2month on child creation.
@@ -63,7 +64,7 @@ This code is licensed as follows:
  *
  */
 
-	public static String version()      {  return "v1.0.9"  }
+	public static String version()      {  return "v1.0.10"  }
 
 definition(
 	name: "Sprinkler Schedule Manager",
@@ -403,7 +404,6 @@ def displayHeader() {
 def displaySubHeader() {
 	section (getFormat("subTitle", "Advanced Options")) {
 		paragraph "<div style='color:#1A77C9;text-align:right;font-weight:small;font-size:9px;'>Developed by: C Steele, Matt Hammond <br/>Current Version: ${version()} -  ${thisCopyright}</div>"
-		paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
 	}
 }
 
