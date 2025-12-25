@@ -47,6 +47,8 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.12	fix removal of Master day group during masterGroupMerge(masterDayGroupIn)
+ * csteele: v1.0.11	fix NPE in setOutdoorRain()
  * csteele: v1.0.10	remove entries from state.valves that aren't in valves.
  * csteele: v1.0.9	hide page when the Timetable is disabled/inactive.
  *                       clean up unused methods: initialized(), installed(), uninstalled()
@@ -67,7 +69,7 @@ This code is licensed as follows:
  *
  */
  
-	public static String version()      {  return "v1.0.10"  }
+	public static String version()      {  return "v1.0.12"  }
 
 definition(
 	name: "Sprinkler Switch Timetable",
@@ -457,6 +459,7 @@ def masterGroupMerge(masterDayGroupIn = [:]) { // lots of deep copies of hashMap
       	          v.ra = masterEntry?.ra ?: false
       	      }
 		}
+		state.dayGroupMaster = [:]
 		dayGroupMerge.each { k, v ->
 			state.dayGroupMaster[k] = v.clone() // deep copy this new master for next pass.
 		}
@@ -586,7 +589,7 @@ def setOutdoorRain(aRainDevice, rainAttr) {
 		logInfo {"OutdoorRain update from Parent, $ms1: ${ard.currentValue(rainAttr)}"}
 		subscribe(ard, rainAttr, recvOutdoorRainHandler)
 	}
-	state.rainHold = rainEnableDevice && rainEnableDevice != "0" && state.rainDeviceOutdoor[rainEnableDevice]?.value.toLowerCase() == "wet"
+	state.rainHold = rainEnableDevice && rainEnableDevice != "0" && state.rainDeviceOutdoor[rainEnableDevice]?.value?.toLowerCase() == "wet"
 }
 
 
