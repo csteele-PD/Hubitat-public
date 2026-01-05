@@ -13,30 +13,37 @@
       "id": "096fca6d-0ea9-442e-8b3c-126527e00d25",
       "namespace": "csteele",
       "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/SprinklerSchedule/SprinklerSchedule_parent.groovy",
+      "betaLocation": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/SprinklerSchedule/SprinklerSchedule_parent.groovy",
       "required": true,
       "oauth": false, 
       "primary": true,
-      "version": "1.0.10"
+      "version": "1.0.10",
+      "betaVersion": "1.0.10-beta"
+
     },
     {
       "name": "Sprinkler Valve Timetable",
       "id": "9aeb656d-120e-4a6c-9dfb-eb5755f360be",
       "namespace": "csteele",
       "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/SprinklerSchedule/SprinklerSchedule_child.groovy",
+      "betaLocation": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/SprinklerSchedule/SprinklerSchedule_child.groovy",
       "required": true,
       "oauth": false,  
       "primary": false,
-      "version": "1.0.15"
+      "version": "1.0.15",
+      "betaVersion": "1.0.15-beta"
     },
     {
       "name": "Sprinkler Switch Timetable",
       "id": "19a256dd-94b2-40a5-90f1-05e7038515f8",
       "namespace": "csteele",
       "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/SprinklerSchedule/SprinklerSchedule_childS.groovy",
+      "betaLocation": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/SprinklerSchedule/SprinklerSchedule_childS.groovy",
       "required": true,
       "oauth": false,  
       "primary": false,
-      "version": "1.0.12"
+      "version": "1.0.12",
+      "betaVersion": "1.0.12-beta"
     }
   ],
   "drivers":[
@@ -45,8 +52,10 @@
       "id": "hybridRainCheck",
       "namespace": "csteele",
       "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/refs/heads/master/SprinklerSchedule/hybridRainCheck.groovy",
+      "betaLocation": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/refs/heads/master/SprinklerSchedule/hybridRainCheck.groovy",
       "required": false,
-      "version": "1.0.0"
+      "version": "1.0.0",
+      "betaVersion": "1.0.0-beta"
     }
   ]
 }
