@@ -70,7 +70,7 @@ definition(
 	name: "Sprinkler Schedule Manager",
 	namespace: "csteele",
 	author: "C Steele",
-	description: "Controls switches to a timing schedule",
+	description: "Controls valves or switches to a timing schedule",
 	importUrl: "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/refs/heads/master/SprinklerSchedule/SprinklerSchedule_parent.groovy",
 	documentationLink: "https://www.hubitatcommunity.com/QuikRef/sprinklerScheduleManagerInfo/index.html",
 	singleInstance: true,
@@ -84,7 +84,6 @@ preferences {
 	page(name: "advancedPage")
 
 }
-
 
 def mainPage() {
 	dynamicPage(name: "mainPage", title: "", install: true, uninstall: true, submitOnChange: true) {
@@ -112,9 +111,9 @@ def mainPage() {
 		  	input "advancedOption", "bool", title: "Display Options that become common to all Sprinkler Timetables.", required: false, defaultValue: false, submitOnChange: true
 			input name: "quickref", type: "hidden", title:"<a href='https://www.hubitatcommunity.com/QuikRef/sprinklerScheduleManagerInfo/index.html' target='_blank'>Quick Reference ${version()}</a>"
 		}
+
 		if (advancedOption) {
-			section(menuHeader("Advanced Options Page"))
-			{
+			section(menuHeader("Advanced Options Page")) {
 				advDescription = 'Valve Timing by Month, Master Groups, Temperature and Rain Devices'
 				href "advancedPage", title: "Advanced Options", required: false, description: advDescription, state: "complete"
 			}
@@ -135,21 +134,25 @@ def advancedPage() {
 	def subTitle = getFormat("title", "Sprinkler Schedules")
 	dynamicPage(name: "advancedPage", title: subTitle, uninstall: false, install: false) {
 		displaySubHeader()
+		
 		section(menuHeader("<b>Master: Adjust valve timing by Month</b>"))
 		{
 			paragraph displayMonths()		// display Monthly percentages
 			  editMonths()
 		}
+
 		section(menuHeader("<b>Master: Select Days into Groups</b>"))
 		{
 			paragraph "<i>Groups defined here will appear as un-editable groups in every Timetable (child). </i>"
 			paragraph displayDayGroups()		// display day-of-week groups
 		}
+
 		section(menuHeader("<b>Master: Select Temperature Device</b>"))
 		{
 			paragraph "<i>Choose a temperature device and set the maximum value. Timetables can be conditional on the temperature exceeding the maximum.</i>"
 			  selectTemperatureDevice()		// are there days that are very hot ?
 		}
+
 		section(menuHeader("<b>Master: Select Rain detection Device</b>"))
 		{
 			paragraph "<i>Choose a Water Sensor device that will supply rain data. Timetables can be conditional on the rain values.</i>"
@@ -245,7 +248,6 @@ String displayDayGroups() {	// display day-of-week groups
 
 
 def selectTemperatureDevice() {
-
 	paragraph "\n<b>Temperature Device Select</b>"
 			input "outdoorTempDevice", "capability.temperatureMeasurement",
       	        title: "Select which device?",
@@ -264,7 +266,6 @@ def selectTemperatureDevice() {
 
 
 def selectRainDevice() {
-
 	paragraph "\n<b>Rain Device Selection</b>"
 			input "rainDeviceOutdoor", "capability.waterSensor",
       	        title: "Select which device?",
