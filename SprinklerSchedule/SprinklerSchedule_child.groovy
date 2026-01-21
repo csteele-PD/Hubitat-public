@@ -47,7 +47,9 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.16	Merge dayGroup tables ( displayTable() merged into displayDayGroups() )
  * csteele: v1.0.15	fix removal of Master day group during masterGroupMerge(masterDayGroupIn)
+ *                       remove "[]" from around dayGroup selection in displayGrpSched
  * csteele: v1.0.14	fix NPE in setOutdoorRain()
  * csteele: v1.0.13	remove entries from state.valves that aren't in valves.
  * csteele: v1.0.12	hide page when the Timetable is disabled/inactive.
@@ -74,7 +76,7 @@ This code is licensed as follows:
  *
  */
  
-	public static String version()      {  return "v1.0.15"  }
+	public static String version()      {  return "v1.0.16"  }
 
 definition(
 	name: "Sprinkler Valve Timetable",
@@ -158,10 +160,7 @@ def main(){
 				section(menuHeader("Schedule")) {
 
 					paragraph "<b>Select Days into Groups</b>"
-					paragraph displayDayGroups()		// display day-of-week groups - Section I
-
-					paragraph "<b>Select Period Settings by Group</b>"
-					paragraph displayTable()		// display groups for scheduling - Section II
+					paragraph displayDayGroups()		// display day-of-week groups - Section I & II
 					  displayDuration()
 					  displayStartTime()
 
@@ -209,6 +208,22 @@ String displayDayGroups() {	// display day-of-week groups - Section I
        	if (state.dayGroup.containsKey(dgK.toString())) { state.dayGroup[dgK.toString()].ot = !state.dayGroup[dgK.toString()].ot } // Toggle state
 		state.remove("overTempBtn") 	// only once 
 	}
+	if (state.eraseTime) { // if the reset/erase button is clicked
+		def eraseTime = state.eraseTime as Integer // which button (row) was clicked
+		def masterSize = state.dayGroupMaster.size()
+		def offset = (masterSize >= eraseTime) 
+		def nIndex = (offset) ? eraseTime.toString() : (eraseTime - masterSize).toString()
+			if (offset) {
+			    if (state.dayGroupMaster.containsKey(nIndex)) { state.dayGroupMaster[nIndex].startTime = 0 }
+			    if (state.dayGroupMaster.containsKey(nIndex)) { state.dayGroupMaster[nIndex].duraTime = 0 }
+			} else {
+			    if (state.dayGroup.containsKey(nIndex)) { state.dayGroup[nIndex].startTime = 0 }
+			    if (state.dayGroup.containsKey(nIndex)) { state.dayGroup[nIndex].duraTime = 0 }
+			}
+		state.remove("eraseTime")
+		app.removeSetting("eraseTime")
+		paragraph "<script>{changeSubmit(this)}</script>"
+	}
 
 	masterGroupMerge()	// merge or riffle merge if there's a new mMap from Parent.
 
@@ -225,6 +240,9 @@ String displayDayGroups() {	// display day-of-week groups - Section I
 		"<th>Sat</th>" +
 		"<th>Sun</th>" +
 		"<th colspan=2 style='color:#db7321;'>OverTemp</th>" +
+		"<th>Start Time</th>" +
+		"<th>Duration</th>" +
+		"<th>Reset</th>" +
 		"</tr></thead>"
 
 	str += "<tr style='color:black'border = 1>" 
@@ -248,6 +266,13 @@ String displayDayGroups() {	// display day-of-week groups - Section I
 	        }
 	        // no delete button on Master dayGroup rows.
 		  str += "<th colspan=2>&nbsp;</th>"
+		  String sTime    = state.dayGroupMerge[k]?.startTime ? buttonLink("t$k", state.dayGroupMerge[k].startTime, "black") : buttonLink("t$k", "Set Time", "green")
+		  String dTime    = state.dayGroupMerge[k]?.duraTime 
+		  String duraTime = dTime ?  buttonLink("n$k", dTime, "purple") : buttonLink("n$k", "Select", "green")
+		  String reset    = buttonLink("x$k", "<iconify-icon icon='bx:reset'></iconify-icon>", "black", "20px")
+		  str += "<th>$sTime</th>" +
+		  	"<th>$duraTime</th>" + 
+		  	"<th title='Reset $k' style='padding:0px 0px'>$reset</th>"
 		  strRows = "</tr><tr>" 
 		  rowCount++
 	}
@@ -265,60 +290,19 @@ String displayDayGroups() {	// display day-of-week groups - Section I
 		  String otBoxN = buttonLink("o$rowCount", O, "#db7321", "")
 		  String otBoxY = buttonLink("o$rowCount", X,   "#db7321", "")
 	        str += (dg."ot") ? "<th>$otBoxY</th>" : "<th>$otBoxN</th>" 
+		  String sTime    = state.dayGroupMerge[rowCount]?.startTime ? buttonLink("t$rowCount", state.dayGroupMerge[rowCount].startTime, "black") : buttonLink("t$rowCount", "Set Time", "green")
+		  String dTime    = state.dayGroupMerge[rowCount]?.duraTime 
+		  String duraTime = dTime ?  buttonLink("n$rowCount", dTime, "purple") : buttonLink("n$rowCount", "Select", "green")
+		  String reset    = buttonLink("x$rowCount", "<iconify-icon icon='bx:reset'></iconify-icon>", "black", "20px")
+		  str += "<th>$sTime</th>" +
+		  	"<th>$duraTime</th>" + 
+		  	"<th title='Reset $k' style='padding:0px 0px'>$reset</th>"
 		  strRows = "</tr><tr>" 
 		  rowCount++
 	}
 	str += "</tr><tr>"
-	str += "<th>$addDayGroupBtn</th><th colspan=4> <- Add new Day Group</th><th colspan=5>&nbsp;</th>"
+	str += "<th>$addDayGroupBtn</th><th colspan=4> <- Add new Day Group</th><th colspan=8>&nbsp;</th>"
 	str += "</tr></table></div>"
-	str
-}
-
-
-String displayTable() { 	// display groups for scheduling - Section II
-	if (state.eraseTime) { // if the reset/erase button is clicked
-		def eraseTime = state.eraseTime as Integer // which button (row) was clicked
-		def masterSize = state.dayGroupMaster.size()
-		def offset = (masterSize >= eraseTime) 
-		def nIndex = (offset) ? eraseTime.toString() : (eraseTime - masterSize).toString()
-			if (offset) {
-			    if (state.dayGroupMaster.containsKey(nIndex)) { state.dayGroupMaster[nIndex].startTime = 0 }
-			    if (state.dayGroupMaster.containsKey(nIndex)) { state.dayGroupMaster[nIndex].duraTime = 0 }
-			} else {
-			    if (state.dayGroup.containsKey(nIndex)) { state.dayGroup[nIndex].startTime = 0 }
-			    if (state.dayGroup.containsKey(nIndex)) { state.dayGroup[nIndex].duraTime = 0 }
-			}
-		state.remove("eraseTime")
-		app.removeSetting("eraseTime")
-		paragraph "<script>{changeSubmit(this)}</script>"
-	}
-
-	String str = "<script src='https://code.iconify.design/iconify-icon/1.0.0/iconify-icon.min.js'></script>"
-	str += "<style>.mdl-data-table tbody tr:hover{background-color:inherit} .tstat-col td,.tstat-col th { padding:8px 8px;text-align:center;font-size:12px} .tstat-col td {font-size:15px }" +
-		"</style><div style='overflow-x:auto'><table class='mdl-data-table tstat-col' style=';border:2px solid black'>" +
-		"<thead><tr style='border-bottom:2px solid black'>" +
-		"<th style='border-right:2px solid black'>Day Group</th>" +
-		"<th>Start Time</th>" +
-		"<th>Duration</th>" +
-		"<th>Reset</th>" +
-		"</tr></thead>"
-
-	state.dayGroupMerge.each {
-	     k, dg -> 
-		  String dayGroupNamed = "Group $k"
-		  String sTime    = state.dayGroupMerge[k]?.startTime ? buttonLink("t$k", state.dayGroupMerge[k].startTime, "black") : buttonLink("t$k", "Set Time", "green")
-		  String dTime    = state.dayGroupMerge[k]?.duraTime 
-		  String duraTime = dTime ?  buttonLink("n$k", dTime, "purple") : buttonLink("n$k", "Select", "green")
-		  String devLink  = "<a href='/device/edit/$k' target='_blank' title='Open Device Page for $dev'>$dev"
-		  String reset    = buttonLink("x$k", "<iconify-icon icon='bx:reset'></iconify-icon>", "black", "20px")
-		  str += "<tr style='color:black'>" +
-		  	"<td style='border-right:2px solid black'>$dayGroupNamed</td>" +
-		  	"<td>$sTime</td>" +
-		  	"<td>$duraTime</td>" + 
-		  	"<td title='Reset $k' style='padding:0px 0px'>$reset</td>" +
-		  	"</tr>"
-	}  
-	str += "</table></div>"
 	str
 }
 
@@ -336,7 +320,7 @@ String displayGrpSched() {	// display mapping of Valve to DayGroup - Section III
 	valves?.sort{it.displayName.toLowerCase()}.each {
 	     dev ->
 		  String devLink = "<a href='/device/edit/$dev.id' target='_blank' title='Open Device Page for $dev'>$dev"
-		  String myDG = state.valves[dev.id].dayGroup
+		  String myDG = state.valves[dev.id].dayGroup.join(', ') // less the [] wrapper
 		  String myDayGroup = myDG ? buttonLink("r$dev.id", myDG, "purple") : buttonLink("r$dev.id", "Select", "green")
 		  str += "<tr style='color:black'>" +
 		  	"<td style='border-right:2px solid black'>$devLink</td>" +
@@ -808,6 +792,7 @@ def scheduleDurationHandler(data) {
 	currentValve?.close()
 	logInfo {"Valve ${currentValve?.label ?: currentValve?.name} closed."}
 
+	// add an interstitial delay to allow the valves to close and recover before opening next.
 	pauseExecution(20000)	// 20 seconds between off and the next on
 
 	if (valve2start != '[]') {
