@@ -6,7 +6,7 @@
             "name": "Linptech 24Ghz Presence Sensor ES1",
             "category": "Control",
             "tags": [
-                "Zigbee",
+                "Matter",
                 "Presence & Location"
             ],
             "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/dev/Linptech-ES1.json",
