@@ -1,0 +1,20 @@
+{
+  "packageName": "Generic Matter Outlet",
+  "author": "csteele",
+  "dateReleased": "2026-01-23",
+  "version": "1.0.0",
+  "releaseNotes": "v1.0.0     initial release.",
+  "releaseNotesExtended": "Initial Release ",
+  "documentationLink": "",
+  "communityLink": "",
+  "drivers": [
+    {
+      "id": "ba47846f-4e38-40c3-ab36-9e6feac7b15",
+      "name": "Generic Matter Outlet",
+      "namespace": "csteele",
+      "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/refs/heads/master/GenericMatterOutlet/GenericMatterOutlet.groovy",
+      "oauth": false,
+      "primary": true,
+      "required": true
+    }
+}
