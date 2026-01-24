@@ -102,7 +102,7 @@
    		"category": "Control",
    		"tags": ["Lights & Switches", "Matter"],
    		"location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/refs/heads/master/GenericMatterOutlet/packageManifest.json",
-   		"description": "Test a Matter Tag with HPM"
+		"description": "Test a Matter Tag with HPM"
 	}
    ]
 }
