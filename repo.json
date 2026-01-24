@@ -6,7 +6,7 @@
    		"name": "AeotecMultiSensor6 Driver",
    		"id": "602887ed-0715-463f-bccf-76e96199e41f",
    		"category": "Control",
-   		"tags": ["Lights & Switches"],
+   		"tags": ["Lights & Switches", "ZWave"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/AeotecMultiSensor6/master/docs/AeotecMultiSensor6.json",
 		"description": "A more preference filled alternative to the Built-In driver.",
 		"descriptive": "<ul><li>Temperature Change Amount (Tenths of a degree)? The tenths of degrees the temperature must change to induce an automatic report.</li><li>Humidity Change Amount (%)? The percentage the humidity must change to induce an automatic report.</li><li>Luminance Change Amount (LUX)? The amount of LUX the luminance must change to induce an automatic report.</li><li>Temperature Offset? -128 to +127 (Tenths of a degree) If your temperature is inaccurate this will offset/adjust it by this many tenths of a degree.</li><li>Humidity Offset/Adjustment -50 to +50 in percent? If your humidity is inaccurate this will offset/adjust it by this percent.</li><li>Luminance Offset/Adjustment -10 to +10 in LUX? If your luminance is inaccurate this will offset/adjust it by this percent.</li></ul>"
@@ -15,7 +15,7 @@
    		"name": "HoneywellThermo-TCC Driver",
    		"id": "05dde39b-e9a8-4589-8d43-77e7556a20fe",
    		"category": "Control",
-   		"tags": ["Temperature & Humidity"],
+   		"tags": ["Temperature & Humidity","Cloud"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/HoneywellThermo-TCC/master/docs/HoneywellThermo-TCC.json",
 		"description": "Integrate Honeywell's Total Comfort Control for your WiFi Thermostat.",
 		"descriptive": "<ul><li>Supports Honeywell's entre level thermostats such as the Honeywell Home Wi-Fi 7-Day Programmable Thermostat (RTH6580WF)</li><li>This integration makes a Cloud connection to Honeywell's Total Connect Comfort (TCC). </li><li>This driver, alone, provides control access (setpoints) to the Thermostat. The Thermostat's built-in scheduler can be adequate for most users.</li><li>Can be combined with Hubitat's Thermostat Controller and/or Hubitat's Thermostat Scheduler.</li></ul>"
@@ -24,7 +24,7 @@
    		"name": "Hubitat-BetterLaundryMonitor",
    		"id": "1f21770b-3beb-44e8-b518-0dd6873aef55",
    		"category": "Control",
-   		"tags": ["Energy Monitoring", "Monitoring", "Appliances"],
+   		"tags": ["Energy Monitoring", "Monitoring", "Appliances", "LAN"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/Hubitat-BetterLaundryMonitor/master/docs/Hubitat-BetterLaundryMonitor.json",
    		"description": "Create alerts for your Laundry being done."
    	},
@@ -57,7 +57,7 @@
    		"name": "Air Quality from AirNow",
    		"id": "045731d0-372c-4fd9-8944-b20129dd31a1",
    		"category": "Control",
-   		"tags": ["Temperature & Humidity"],
+   		"tags": ["Temperature & Humidity","Cloud"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/AirQuality-AirNow/main/docs/AirQuality-AirNow.json",
    		"description": "Yet Another Air Quality Index from AirNow "
    	},
@@ -65,7 +65,7 @@
    		"name": "Honeywell Thermo Parent",
    		"id": "75e88544-33e9-467b-9064-9954b2646ef3",
    		"category": "Control",
-   		"tags": ["Temperature & Humidity"],
+   		"tags": ["Temperature & Humidity","Cloud"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/HoneywellThermoParent/main/docs/HoneywellThermoParent.json",
 		"description": "A Parent/child version of the original",
 		"descriptive": "<ul><li>Supports multiple Honeywell WiFi Thermostats under a single TCC id with each child thermostat operating independently.</li><li>Supports Honeywell's entre level thermostats such as the Honeywell Home Wi-Fi 7-Day Programmable Thermostat (RTH6580WF)</li><li>This integration makes a Cloud connection to Honeywell's Total Connect Comfort (TCC). </li><li>This driver, alone, provides control access (setpoints) to the Thermostat. The Thermostat's built-in scheduler can be adequate for most users.</li><li>Can be combined with Hubitat's Thermostat Controller and/or Hubitat's Thermostat Scheduler.</li></ul>"
@@ -74,7 +74,7 @@
    		"name": "EtherRain",
    		"id": "026cd1b9-b963-4852-80a5-07328d34d4d7",
    		"category": "Control",
-   		"tags": ["Irrigation", "LAN", "Timers", "Valves", "Water"],
+   		"tags": ["Irrigation", "LAN", "Timers", "Valves", "Water", "Cloud"],
    		"location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/EtherRain/packageManifest.json",
    		"description": "EtherRain Sprinkler Controller and child Driver"
    	},
