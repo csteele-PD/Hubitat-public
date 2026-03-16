@@ -5,7 +5,6 @@
    	{
    		"name": "AeotecMultiSensor6 Driver",
    		"id": "602887ed-0715-463f-bccf-76e96199e41f",
-   		"category": "Control",
    		"tags": ["Lights & Switches", "ZWave"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/AeotecMultiSensor6/master/docs/AeotecMultiSensor6.json",
 		"description": "A more preference filled alternative to the Built-In driver.",
@@ -14,7 +13,6 @@
    	{
    		"name": "HoneywellThermo-TCC Driver",
    		"id": "05dde39b-e9a8-4589-8d43-77e7556a20fe",
-   		"category": "Control",
    		"tags": ["Temperature & Humidity","Cloud"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/HoneywellThermo-TCC/master/docs/HoneywellThermo-TCC.json",
 		"description": "Integrate Honeywell's Total Comfort Control for your WiFi Thermostat.",
@@ -23,7 +21,6 @@
    	{
    		"name": "Hubitat-BetterLaundryMonitor",
    		"id": "1f21770b-3beb-44e8-b518-0dd6873aef55",
-   		"category": "Control",
    		"tags": ["Energy Monitoring", "Monitoring", "Appliances", "LAN"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/Hubitat-BetterLaundryMonitor/master/docs/Hubitat-BetterLaundryMonitor.json",
    		"description": "Create alerts for your Laundry being done."
@@ -31,7 +28,6 @@
    	{
    		"name": "Auto_Off",
    		"id": "7ff58c4c-4ee9-4089-a2ff-a178e248bdc2",
-   		"category": "Control",
    		"tags": ["Lights & Switches", "Tools & Utilities"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/Auto_Off/main/docs/Auto_Off.json",
    		"description": "Automatically turn Off a switch after a delay."
@@ -39,7 +35,6 @@
    	{
    		"name": "Auto_Off Bundle",
    		"id": "130db2f2-69b0-45a6-b27f-1416ea30ee33",
-   		"category": "Control",
    		"tags": ["Lights & Switches", "Tools & Utilities"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/Auto_Off/main/docs/Auto_OffBundle.json",
    		"description": "Automatically turn Off a switch after a delay."
@@ -47,7 +42,6 @@
    	{
    		"name": "GetAttributeApp",
    		"id": "1d32f650-bbe7-4700-9596-83dff854e698",
-   		"category": "Control",
    		"tags": ["Tools & Utilities"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/GetAttributeApp/master/docs/GetAttributeApp.json",
 		"description": "Display a device's Capabilities, Attributes and Commands.",
@@ -56,7 +50,6 @@
       {
    		"name": "Air Quality from AirNow",
    		"id": "045731d0-372c-4fd9-8944-b20129dd31a1",
-   		"category": "Control",
    		"tags": ["Temperature & Humidity","Cloud"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/AirQuality-AirNow/main/docs/AirQuality-AirNow.json",
    		"description": "Yet Another Air Quality Index from AirNow "
@@ -64,7 +57,6 @@
       {
    		"name": "Honeywell Thermo Parent",
    		"id": "75e88544-33e9-467b-9064-9954b2646ef3",
-   		"category": "Control",
    		"tags": ["Temperature & Humidity","Cloud"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/HoneywellThermoParent/main/docs/HoneywellThermoParent.json",
 		"description": "A Parent/child version of the original",
@@ -73,7 +65,6 @@
       {
    		"name": "EtherRain",
    		"id": "026cd1b9-b963-4852-80a5-07328d34d4d7",
-   		"category": "Control",
    		"tags": ["Irrigation", "LAN", "Timers", "Valves", "Water", "Cloud"],
    		"location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/EtherRain/packageManifest.json",
    		"description": "EtherRain Sprinkler Controller and child Driver"
@@ -81,7 +72,6 @@
       {
    		"name": "AverageThis",
    		"id": "245d904c-d8a4-4c35-8788-6fb5f8962335",
-   		"category": "Control",
    		"tags": ["Energy Monitoring", "Monitoring", "Appliances"],
    		"location": "https://raw.githubusercontent.com/HubitatCommunity/AverageThis/master/docs/AverageThis.json",
 		"description": "Calculates a Rolling Average of Illuminance, Temperature and Relative Humidity from a set of Omni Sensors into a virtual sensor of your choice.",
@@ -90,7 +80,6 @@
 	{
 		"name": "Sprinkler Schedule Manager",
 		"id": "1bd62e6f-11b6-43a3-af69-3d2b46a4e6b8",
-		"category": "Integrations",
 		"location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/SprinklerSchedule/PackageManifest.json",
 		"description": "App to schedule sprinkler valves on a daily basis.",
 		"descriptive": "<ul><li>Parent is where Optional Master Day Groups are managed.</li><li>Parent is where Optional Month by Month watering percentages are managed.</li><li>Parent is where an outside Temperature device is selected and the temperature limit is set.</li></ul><ul><li>Multiple child Timetables within the Parent Application.</li><li>Each Timetable has Days in Groups, ie. weekdays and weekends</li><li>Each Group of days within a Timetable has a Start Time and a Duration.</li><li>Groups have conditionals of OverHeat and Rain.</li><li>Each Timeline has one or more Valves selected.</li><li>Valves can be assigned to any/all of the Groups.</li></ul>",
@@ -99,7 +88,6 @@
     {
    		"name": "Generic Matter Outlet",
    		"id": "026cd1b9-b963-4852-80a5-07328e34d4d7",
-   		"category": "Control",
    		"tags": ["Lights & Switches", "Matter"],
    		"location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/refs/heads/master/GenericMatterOutlet/packageManifest.json",
 		"description": "Test a Matter Tag with HPM"
