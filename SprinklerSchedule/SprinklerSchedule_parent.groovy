@@ -14,25 +14,25 @@ This code is licensed as follows:
 	 	Copyright (c) 2022 Hubitat, Inc.  All Rights Reserved Bruce Ravenel 
 
 	BSD 3-Clause License
-	
+
 	Copyright (c) 2023, C Steele
 	Copyright (c) 2020, Matt Hammond
 	All rights reserved.
-	
+
 	Redistribution and use in source and binary forms, with or without
 	modification, are permitted provided that the following conditions are met:
-	
+
 	1. Redistributions of source code must retain the above copyright notice, this
 	   list of conditions and the following disclaimer.
-	
+
 	2. Redistributions in binary form must reproduce the above copyright notice,
 	   this list of conditions and the following disclaimer in the documentation
 	   and/or other materials provided with the distribution.
-	
+
 	3. Neither the name of the copyright holder nor the names of its
 	   contributors may be used to endorse or promote products derived from
 	   this software without specific prior written permission.
-	
+
 	THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 	AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 	IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -47,6 +47,8 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.12	Add Overlap Check
+ * csteele: v1.0.11	Add Soil Type
  * csteele: v1.0.10	cosmetic remove Horz Rule
  * csteele: v1.0.9	clean up unused methods: componentInitialize()
  *				 refactored logging into using closures.
@@ -64,7 +66,7 @@ This code is licensed as follows:
  *
  */
 
-	public static String version()      {  return "v1.0.10"  }
+	public static String version()      {  return "v1.0.12"  }
 
 definition(
 	name: "Sprinkler Schedule Manager",
@@ -85,7 +87,9 @@ preferences {
 
 }
 
+
 def mainPage() {
+	if (state.overlapHide == null) state.overlapHide = true
 	dynamicPage(name: "mainPage", title: "", install: true, uninstall: true, submitOnChange: true) {
 		displayHeader()
 		state.appInstalled = app.getInstallationState() 
@@ -119,6 +123,17 @@ def mainPage() {
 			}
 			// Send the current Maps to each Child, exactly like an Update-from-Done would do.
 			childSetStates()
+		}
+
+		section("Overlap Checker", hideable:true, hidden: state.overlapHide) {
+		log.debug "Overlap: $state.overlapHide"
+			input "overlapCheckBtn", "button", title: "Run Overlap Check", submitOnChange: true
+			if (state.lastOverlapCheck) {
+				paragraph "Last checked: ${state.lastOverlapCheck}"
+			}
+			if (state.overlapReport) {
+				paragraph state.overlapReport
+			}
 		}
 	}
 }
@@ -197,8 +212,8 @@ String displayMonths() {	// display Monthly percentages
 String displayDayGroups() {	// display day-of-week groups
 	if(state.dayGroup == null) state.dayGroup = ['1': ['1':true, '2':true, '3':true, '4':true, '5':true, '6':true, '7':true, "s": "P", "name": "", "ot": false, "ra": false, "duraTime": null, "startTime": null ] ] // initial row
 	if(state.dayGroupBtn) {
-		String dgK = state.dayGroupBtn.substring(0, 1); // dayGroupBtn Key (row)
-		String dgI = state.dayGroupBtn.substring(1);    // dayGroupBtn value (mon-sun)
+		String dgK = state.dayGroupBtn.substring(0, 1) // dayGroupBtn Key (row)
+		String dgI = state.dayGroupBtn.substring(1)    // dayGroupBtn value (mon-sun)
 
 		state.dayGroup."$dgK"."$dgI" = state.dayGroup."$dgK"."$dgI" ? false : true // toggle the state.
 		state.remove("dayGroupBtn") // only once 
@@ -299,6 +314,116 @@ def selectRainDevice() {
 
 /*
 -----------------------------------------------------------------------------
+Soil handlers
+-----------------------------------------------------------------------------
+*/
+
+def getSoilTypeFromUSDA() {
+	state.geo=state.geo?:[:]
+	if(state.geo.lat==null||state.geo.lon==null) {
+		state.geo.lat=location?.latitude
+		state.geo.lon=location?.longitude
+		logInfo {"Using lat/lon from hub location"}
+	}
+	def lat=state.geo?.lat
+	def lon=state.geo?.lon
+	if(!lat||!lon){
+		state.usdaSoilMsg="Hub coordinates unavailable."
+		logWarn {"${state.usdaSoilMsg}"}
+		return
+	}
+	def sda=getSoilData(lat,lon)
+	if(!sda||!sda.textureMapped){
+		state.usdaSoilMsg="No USDA data returned for (${lat},${lon})"
+		logWarn {"${state.usdaSoilMsg}"}
+		return
+	}
+	def mapped=sda.textureMapped
+	def raw=sda.textureRaw?:"n/a"
+	def hyd=sda.hydgrp?:"n/a"
+	def awc=sda.awc?:etAwcForSoil(mapped)
+	state.defaultSoilType=mapped
+	state.defaultAwc=awc
+	state.defaultHydgrp=hyd
+	state.usdaSoilMsg="USDA soil detected: ${mapped} (USDA: ${raw}, Group ${hyd}, AWC=${awc})"
+	logInfo {"Soil: ${state.usdaSoilMsg}"}
+}
+
+
+def getSoilData(lat, lon) {
+	def d=0.0001
+	def poly="POLYGON((${lon-d} ${lat-d},${lon+d} ${lat-d},${lon+d} ${lat+d},${lon-d} ${lat+d},${lon-d} ${lat-d}))"
+	def query = """
+		SELECT TOP 1
+		  mapunit.musym,
+		  mapunit.muname,
+		  component.compname,
+		  component.hydgrp,
+		  chtexturegrp.texdesc
+		FROM mapunit
+		  INNER JOIN component ON component.mukey = mapunit.mukey
+		  INNER JOIN chorizon ON chorizon.cokey = component.cokey
+		  INNER JOIN chtexturegrp ON chtexturegrp.chkey = chorizon.chkey
+		WHERE mapunit.mukey IN (
+		  SELECT mukey FROM SDA_Get_Mukey_from_intersection_with_WktWgs84('${poly}')
+		)
+	"""
+	def params=[uri: "https://sdmdataaccess.nrcs.usda.gov/tabular/post.rest",
+		contentType: "application/x-www-form-urlencoded",
+		body: [query: query],timeout: 20]
+
+	try {
+		def respText=''
+		httpPost(params){
+			r->
+			   def t=r?.data
+			   def tn=t?.class?.name?:''
+			respText=(tn.contains('InputStream')||tn.contains('Reader'))?t?.getText('UTF-8'):t?.toString()
+		}
+		if (!respText) {
+			logWarn {"getSoilData(): empty SDA response for (${lat},${lon})"}
+			return null
+		}
+		// Trim garbage and extract only the <Table> element
+		respText=respText.substring(respText.indexOf("<"))
+		def m=respText=~ /(?s)<Table>(.*?)<\/Table>/
+		if (!m.find()) {
+			logWarn {"getSoilData(): no <Table> block in SDA response"}
+			return null
+		}
+		def tableXML="<Table>${m.group(1)}</Table>"
+		tableXML=tableXML.replaceAll(/&(?![a-zA-Z]+;|#\d+;)/, '&amp;')
+		def xml=new XmlSlurper(false, false).parseText(tableXML)
+		def musym=xml?.musym?.text()?:''
+		def muname=xml?.muname?.text()?:''
+		def compname=xml?.compname?.text()?:''
+		def hydgrp=xml?.hydgrp?.text()?:''
+		def texdesc=xml?.texdesc?.text()?:''
+		if (!texdesc&&!muname){
+			logWarn {"getSoilData(): no soil data for (${lat},${lon})"}
+			return null
+		}
+		return [musym:musym,muname:muname,compname:compname,hydgrp:hydgrp,textureRaw:texdesc,textureMapped:mapSoilTextureToClass(texdesc)]
+	} catch(e) { logWarn {"getSoilData() SDA error: ${e.message}"}; return null }
+}
+
+
+def mapSoilTextureToClass(String texture){
+    if(!texture)return"Loam"
+    def t=texture.toLowerCase().trim()
+    switch(true){
+        case{t=="sand"||t.contains("coarse sand")||t.contains("fine sand")}:return"Sand"
+        case{t.contains("loamy sand")||t.contains("sandy loam")||t.contains("fine sandy loam")}:return"Loamy Sand"
+        case{t.contains("loam")||t.contains("silt loam")||t.contains("silty clay loam")||t.contains("sandy clay loam")}:return"Loam"
+        case{t.contains("clay loam")||t.contains("silty clay")||t.contains("sandy clay")}:return"Clay Loam"
+        case{t=="clay"||t.contains("heavy clay")||t.contains("vertisol")}:return"Clay"
+        default:return"Loam"
+    }
+}
+
+
+/*
+-----------------------------------------------------------------------------
 Display level handlers
 -----------------------------------------------------------------------------
 */
@@ -361,6 +486,7 @@ def installed() {
 def updated() {
 	logInfo {"Updated with settings."}//": ${settings}"}
 	childSetStates()
+	state.overlapHide = true
 }
 
 
@@ -421,32 +547,158 @@ void appButtonHandler(btn) {
 	else if ( btn == "addDGBtn")            addDayGroup()
 	else if ( btn.startsWith("rem")      )  remDayGroup(btn.minus("rem")) 
 	else if ( btn.startsWith("w")        )  state.dayGroupBtn = btn.minus("w")
+	else if ( btn == "overlapCheckBtn"   )  runOverlapCheck()
 }
 
 
 void childSetStates() {
+	getSoilTypeFromUSDA()
 	childApps.each {child ->
 		child.set2Month(state.month2month) 
 		child.set2DayGroup(state.dayGroup) 
+		child.setSoilType(state.defaultSoilType) 
 		if (outdoorTempDevice) { child.setOutdoorTemp(outdoorTempDevice, maxOutdoorTemp) }
 		if (rainDeviceOutdoor) { child.setOutdoorRain(rainDeviceOutdoor, state.currentRainAttribute) }
 	}
 }
 
+
+def runOverlapCheck() {
+	state.overlapHide = false
+	def dayNames = [1:"Mon", 2:"Tue", 3:"Wed", 4:"Thu", 5:"Fri", 6:"Sat", 7:"Sun"]
+	def allWindows = []
+	def missing = []
+
+	childApps.each { child ->
+		try {
+			def w = child.getScheduleWindows() ?: []
+			allWindows.addAll(w)
+		} catch (MissingMethodException e) {
+			missing << normalizeLabel(child?.label)
+		}
+	}
+
+	def report = new StringBuilder()
+	def nowStr = new Date().format("yyyy-MM-dd HH:mm")
+	state.lastOverlapCheck = nowStr
+	report << "<b>Overlap Check</b> (${nowStr})<br>"
+
+	if (missing) {
+		report << "Warning: missing schedule data from: ${missing.join(', ')}<br>"
+	}
+
+	if (!allWindows) {
+		report << "No schedules found to analyze.<br>"
+		state.overlapReport = report.toString()
+		return
+	}
+
+	def byDay = [:].withDefault { [] }
+	def rollover = []
+
+	allWindows.each { w ->
+		def startSec = w.startSec as Integer
+		def endSec = startSec + (w.totalSec as Integer)
+		def dayIndex = w.dayIndex as Integer
+		if (endSec <= 86400) {
+			byDay[dayIndex] << w + [endSec: endSec]
+		} else {
+			rollover << w
+			byDay[dayIndex] << w + [endSec: 86400, rollover: true]
+			def nextDay = (dayIndex % 7) + 1
+			byDay[nextDay] << w + [startSec: 0, endSec: endSec - 86400, rollover: true]
+		}
+	}
+
+	if (rollover) {
+		report << "Warning: ${rollover.size()} schedule(s) cross midnight and were split for analysis.<br>"
+	}
+
+	def anyOverlap = false
+	(1..7).each { dayIdx ->
+		def dayList = byDay[dayIdx]?.sort { a, b ->
+			a.startSec <=> b.startSec ?: (a.timeline <=> b.timeline)
+		} ?: []
+		if (!dayList) return
+
+		def active = []
+		def dayIssues = []
+
+		dayList.each { w ->
+			active = active.findAll { it.endSec > w.startSec }
+			if (active) {
+				def overlapsWith = active.collect()
+				def latestEnd = overlapsWith.collect { it.endSec }.max()
+				def shiftSec = Math.max(0, latestEnd - w.startSec)
+				dayIssues << [win: w, overlaps: overlapsWith, shiftSec: shiftSec]
+			}
+			active << w
+		}
+
+		if (dayIssues) {
+			anyOverlap = true
+			report << "<br><b>${dayNames[dayIdx]}</b><br>"
+			dayIssues.each { issue ->
+				def w = issue.win
+				def overlapNames = issue.overlaps.collect { ow ->
+					"${ow.timeline} (DG ${ow.dayGroup} @ ${formatTime(ow.startSec)})"
+				}
+				def shiftStr = issue.shiftSec > 0 ? formatDuration(issue.shiftSec) : "0m"
+				report << "${w.timeline} (DG ${w.dayGroup} @ ${formatTime(w.startSec)}, total ${formatDuration(w.totalSec)}, valves ${w.valveCount}) overlaps with ${overlapNames.join(' and ')}. "
+				report << "Moving ${w.timeline} (DG ${w.dayGroup}) forward ${shiftStr} would resolve.<br>"
+			}
+		}
+	}
+
+	if (!anyOverlap) {
+		report << "No overlaps found across all days.<br>"
+	}
+
+	state.overlapReport = report.toString()
+}
+
 /*
 -----------------------------------------------------------------------------
-Logging output
+Logging output (Parent has no logging options)
 -----------------------------------------------------------------------------
 */
 
 void logDebug(Closure msg) {
-    if (settings.debugEnable) { log.debug "${msg()}" }
+    log.debug "${msg()}"
 }
 
 void logInfo(Closure msg) {
-    if (settings.infoEnable) { log.info "${msg()}" }
+    log.info "${msg()}"
+}
+
+void logWarn(Closure msg) {
+    log.warn "${msg()}"
+}
+
+private String formatTime(Integer seconds) {
+	int s = seconds ?: 0
+	int h = (int)(s / 3600)
+	int m = (int)((s % 3600) / 60)
+	int sec = s % 60
+	if (sec == 0) return String.format("%02d:%02d", h, m)
+	return String.format("%02d:%02d:%02d", h, m, sec)
+}
+
+private String formatDuration(Integer seconds) {
+	int s = seconds ?: 0
+	int m = (int)(s / 60)
+	int sec = s % 60
+	if (sec == 0) return "${m}m"
+	return "${m}m ${sec}s"
+}
+
+private String normalizeLabel(String label) {
+	if (!label) return ""
+	def flag = '<span '
+	return label.contains(flag) ? label.substring(0, label.indexOf(flag)) : label
 }
 
 
+BigDecimal etAwcForSoil(String soil){switch(soil?.trim()){case"Sand":return 0.05G;case"Loamy Sand":return 0.07G;case"Sandy Loam":return 0.10G;case"Loam":return 0.17G;case"Clay Loam":return 0.20G;case"Silty Clay":return 0.18G;case"Clay":return 0.21G;default:return 0.17G}}
 String menuHeader(titleText){"<div style=\"width:102%;background-color:#696969;color:white;padding:4px;font-weight: bold;box-shadow: 1px 2px 2px #bababa;margin-left: -10px\">${titleText}</div>"}
 def getThisCopyright(){"&copy; 2023 C Steele"}
