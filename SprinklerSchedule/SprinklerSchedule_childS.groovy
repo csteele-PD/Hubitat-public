@@ -47,6 +47,8 @@ This code is licensed as follows:
  *
  *
  *
+ * csteele: v1.0.15	Add Overlap Check
+ * csteele: v1.0.14	Accept Soil Type from Parent
  * csteele: v1.0.13	Merge dayGroup tables ( displayTable() merged into displayDayGroups() )
  * csteele: v1.0.12	fix removal of Master day group during masterGroupMerge(masterDayGroupIn)
  *                       remove "[]" from around dayGroup selection in displayGrpSched
@@ -71,7 +73,7 @@ This code is licensed as follows:
  *
  */
  
-	public static String version()      {  return "v1.0.13"  }
+	public static String version()      {  return "v1.0.15"  }
 
 definition(
 	name: "Sprinkler Switch Timetable",
@@ -127,7 +129,8 @@ def main(){
 				 	String str = "<div style='background-color: rgba(73, 163, 125, 0.3);'>"	
 					if (state.month2month) {
 						str += "<b>Adjust valve timing</b> by Month is active. Current month is: <b>$currentMonthPercentage%</b><br>" +
-						"<b>Rain hold</b> is $state.rainHold<br>"
+						"<b>Rain hold</b> is $state.rainHold<br>" +
+						"<b>Soil</b> is $state.defaultSoilType<br>"
 					}
 					if (state.overTempToday) { str += "Sometime today, the outside temperature <b>exceeded</b> the limit you set of $state.maxOutdoorTemp and any Over Temp schedules <b>will run.</b><br>" }
 					str += valves?.collect { dev -> "<b>${dev.label ?: dev.name}</b> is ${dev.currentValue('valve', true) == 'on' ? 'On' : 'Off'}"}?.join(', ') ?: ""
@@ -265,9 +268,9 @@ String displayDayGroups() {	// display day-of-week groups - Section I
 		  String dTime    = state.dayGroupMerge[k]?.duraTime 
 		  String duraTime = dTime ?  buttonLink("n$k", dTime, "purple") : buttonLink("n$k", "Select", "green")
 		  String reset    = buttonLink("x$k", "<iconify-icon icon='bx:reset'></iconify-icon>", "black", "20px")
-		  str += "<td>$sTime</td>" +
-		  	"<td>$duraTime</td>" + 
-		  	"<td title='Reset $k' style='padding:0px 0px'>$reset</td>"
+		  str += "<th>$sTime</th>" +
+		  	"<th>$duraTime</th>" + 
+		  	"<th title='Reset $k' style='padding:0px 0px'>$reset</th>"
 		  strRows = "</tr><tr>" 
 		  rowCount++
 	}
@@ -289,9 +292,9 @@ String displayDayGroups() {	// display day-of-week groups - Section I
 		  String dTime    = state.dayGroupMerge[rowCount]?.duraTime 
 		  String duraTime = dTime ?  buttonLink("n$rowCount", dTime, "purple") : buttonLink("n$rowCount", "Select", "green")
 		  String reset    = buttonLink("x$rowCount", "<iconify-icon icon='bx:reset'></iconify-icon>", "black", "20px")
-		  str += "<td>$sTime</td>" +
-		  	"<td>$duraTime</td>" + 
-		  	"<td title='Reset $k' style='padding:0px 0px'>$reset</td>"
+		  str += "<th>$sTime</th>" +
+		  	"<th>$duraTime</th>" + 
+		  	"<th title='Reset $k' style='padding:0px 0px'>$reset</th>"
 		  strRows = "</tr><tr>" 
 		  rowCount++
 	}
@@ -537,6 +540,9 @@ def update() {
 }
 
 
+//
+// Parent sends values and devices to all Child apps.
+//
 def set2Month(monthIn) { 
 	state.month2month = monthIn
 	logInfo {"MonthIn update from Parent."}
@@ -547,6 +553,13 @@ def set2DayGroup(dayGroupIn) {
 	masterGroupMerge(dayGroupIn)
 	logInfo {"DayGroup update from Parent."}
 }
+
+
+def setSoilType(val) {
+	state.defaultSoilType = val
+	logInfo {"Soil Type update from Parent, defaultSoilType: $state.defaultSoilType"}
+}
+
 
 def setOutdoorTemp(aTempDevice, dTemp) {
 	state.outdoorTempDevice = aTempDevice.currentStates
@@ -576,6 +589,56 @@ def setOutdoorRain(aRainDevice, rainAttr) {
 }
 
 
+def getScheduleWindows() {
+	masterGroupMerge()
+	String baseLabel = app.label?.with {
+		def flag = '<span '
+		contains(flag) ? substring(0, indexOf(flag)) : it
+	} ?: ""
+
+	def windows = []
+	if (!state.dayGroupMerge) return windows
+	def valveOrder = settings.valves ?: []
+
+	state.dayGroupMerge.each { k, v ->
+		def startTime = v?.startTime
+		def duraTime = v?.duraTime
+		if (!startTime || !duraTime) return
+
+		def valveIds = []
+		valveOrder.each { dev ->
+			if (state.valves[dev.id]?.dayGroup?.contains(k.toString())) {
+				valveIds << dev.id.toString()
+			}
+		}
+		int valveCount = valveIds.size()
+		if (valveCount == 0) return
+
+		int perValveSec = Math.max(((duraTime as BigDecimal) * 60G).toInteger(), 20)
+		int totalSec = (valveCount * perValveSec) + ((valveCount - 1) * 20)
+
+		(1..7).each { dayIdx ->
+			if (v["$dayIdx"] == true) {
+				windows << [
+					timeline   : baseLabel,
+					dayIndex   : dayIdx,
+					dayGroup   : k.toString(),
+					startTime  : startTime,
+					startSec   : timeToSeconds(startTime),
+					durationMin: duraTime,
+					totalSec   : totalSec,
+					valveCount : valveCount
+				]
+			}
+		}
+	}
+	return windows
+}
+
+
+//
+// Subscription Handlers
+//
 def recvOutdoorTempHandler(evt) {
 	if (!state.overTempToday) { 	// if the temp goes over the limit, latch 'true' state til midnight reset
 		state.overTempToday = new BigDecimal(evt.value) > new BigDecimal(state.maxOutdoorTemp) //  true : false 
@@ -623,6 +686,7 @@ def init(why) {
 			if(state.rainHold == null) state.rainHold = false
 			if(state.dayGroup == null) state.dayGroup = ['1': ['1':true, '2':true, '3':true, '4':true, '5':true, '6':true, '7':true, "s": "P", "name": "", "ot": false, "ra": false, "duraTime": null, "startTime": null ] ] // initial row
 			if(state.rainDeviceOutdoor == null) state.rainDeviceOutdoor = [:] 
+			if(state.defaultSoilType == null) state.defaultSoilType = "Unknown"
 
 			if(state.month2month == null) state.month2month = [:]
 			if(state.dayGroupMaster == null) state.dayGroupMaster = [:]
@@ -889,6 +953,15 @@ def displayHeader() {
 		paragraph "<div style='color:#1A77C9;text-align:right;font-weight:small;font-size:9px;'>Developed by: C Steele, Matt Hammond<br/>Current Version: ${version()} -  ${thisCopyright}</div>"
 		paragraph "\n<hr style='background-color:#1A77C9; height: 1px; border: 0;'></hr>"
 	}
+}
+
+
+private Integer timeToSeconds(String timeStr) {
+	if (!timeStr) return null
+	def parts = timeStr.split(':')
+	int h = parts[0].toInteger()
+	int m = parts[1].toInteger()
+	return (h * 3600) + (m * 60)
 }
 
 
