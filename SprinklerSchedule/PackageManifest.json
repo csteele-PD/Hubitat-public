@@ -1,7 +1,7 @@
 {
   "packageName": "Sprinkler Schedule Manager",
   "author": "C Steele",
-  "minimumHEVersion": "0.0",
+  "minimumHEVersion": "2.4.0",
   "dateReleased": "2025-02-22",
   "version": "1.0.10",
   "releaseNotes": "v1.0.12 Parent Release / v1.0.18 Valve Child Release / v1.0.15 Switch Child Release.",
