@@ -6,7 +6,6 @@
   "version": "1.0.12",
   "releaseNotes": "v1.0.12 Parent Release / v1.0.18 Valve Child Release / v1.0.15 Switch Child Release.",
   "releaseNotesExtended": "A Parent/Child App to manage sprinkler valves with Start Time and Duration. Timelines can have a single valve or multiple in a group. Whatever the size of the Group, Start Time and Duration apply. ",
-  "betaReleaseNotes": "no Beta Release at this time.",
   "documentationLink": "https://www.hubitatcommunity.com/QuikRef/sprinklerScheduleManagerInfo/index.html",
   "communityLink": "https://community.hubitat.com/t/release-sprinkler-schedule-manager-app/149959/63",
   "apps": [
