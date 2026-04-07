@@ -2,9 +2,8 @@
   "packageName": "EtherRain",
   "author": "csteele",
   "dateReleased": "2023-10-05",
-  "version": "1.0.4",
-  "releaseNotes": "v1.0.4     add Rain Sensor status.\n           removed State variables from standalone version check.\n           expose version & copyright.\nv1.0.3     use descTextEnable / log.info to provide at least one status when debug is off.\n *            matched valve name for childDevice.parse \n *            removed null $description from status info message",
-  "releaseNotesExtended": "Initial Release use with <a href='http://www.lawncheck.com/'>LawnCheck.com</a>",
+  "version": "2.0.0",
+  "releaseNotes": "v2.0.0   Refactor to use login in parent and protect data input.\n",
   "documentationLink": "http://www.quicksmart.com/qs_etherrain.html",
   "communityLink": "",
   "drivers": [
