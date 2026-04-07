@@ -12,9 +12,11 @@
  *
  */
 
-public static String version()      {  return "v1.0.3"  }
+public static String version()      {  return "v2.0.0"  }
 
 /***********************************************************************************************************************
+ * Version: 2.0.0     Refactor to use login in parent and protect data input.
+ *
  *         v1.0.3     removed unused State (InternalName)
  *                    expose version & copyright.
  *         v1.0.2     removed standalone version check (allow HPM to check.)
@@ -28,9 +30,10 @@ metadata {
 		capability "Valve"
 		capability "Actuator"
 	}
+
       preferences 
       {
-		input("valveTimer", "text", title: "<b>Valve Timer</b>", description: "<i>On time of this Valve?</i>", defaultValue: 5, required: false)
+		input("valveTimer", "number", title: "<b>Valve Timer</b>", description: "<i>On time of this Valve?</i>", defaultValue: 5, range: "1..249", required: false)
 	}
 }
 
@@ -39,6 +42,8 @@ void open() {
 	def id = getDataValue("componentLabel")
 	parent.open(id, valveTimer) 
 }
+
+
 void close() {
 	def id = getDataValue("componentLabel")
 	parent.close(id, valveTimer) 
@@ -46,7 +51,11 @@ void close() {
 
 
 void parse(String description) { log.warn "parse(String description) not implemented" }
+
+
 void parse(List description) { log.warn "parse(List description) not implemented" }
+
+
 void parse(Map evt) { sendEvent(evt) }  // report an Event in Parent, report Valve event in child.
 
 /*
@@ -86,5 +95,6 @@ void initialize()
 	log.trace "EtherRain Child Initialize"
 	state.remove("InternalName")
 }
+
 
 def getThisCopyright(){"&copy; 2019 C Steele "}
