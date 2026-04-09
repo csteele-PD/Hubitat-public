@@ -18,9 +18,10 @@
  *
  */
  
-public static String version()      {  return "v2.0.0"  }
+public static String version()      {  return "v2.0.1"  }
 
 /***********************************************************************************************************************
+ *         v2.0.1     adjust logging a bit tighter.
  * Version: 2.0.0     Refactor to use login in parent and protect data input.
  *
  *         v1.0.4     add Rain Sensor status.
@@ -62,10 +63,8 @@ metadata
 			//standard logging options
 			input name: "descTextEnable", type: "bool", title: "<b>Enable descriptionText logging?</b>", defaultValue: true
 			input name: "debugEnable",    type: "bool", title: "<b>Enable debug logging?</b>", defaultValue: true
-			if (debugEnable) {
-				input "debugTimeout", "enum", defaultValue: "0", title: "Automatic debug Log Disable Timeout?", width: 3,  \
-				    	options: [ "0":"None", "1800":"30 Minutes", "3600":"60 Minutes", "86400":"1 Day" ]
-			}
+			input "debugTimeout", "enum", defaultValue: "0", title: "Automatic debug Log Disable Timeout?", width: 3,  \
+				options: [ "0":"None", "1800":"30 Minutes", "3600":"60 Minutes", "86400":"1 Day" ]
 		}
     }
 }
@@ -203,7 +202,7 @@ def etherainLogin(val, quickVal = null) {
 	if (debugEnable) log.debug "EtherRainLogin request: $params"
 	try {
 		httpGet(params) { resp ->
-			if (descTextEnable) log.info "EtherRainLogin returned: $resp.status"
+			if (debugEnable) log.debug "EtherRainLogin returned: $resp.status"
 
 			if(resp.getStatus() == 200 || resp.getStatus() == 207) {
 				if (debugEnable) log.debug "EtherRainLogin was successful, $resp.status"
