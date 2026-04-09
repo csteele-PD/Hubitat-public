@@ -2,8 +2,8 @@
   "packageName": "EtherRain",
   "author": "csteele",
   "dateReleased": "2023-10-05",
-  "version": "2.0.0",
-  "releaseNotes": "v2.0.0   Refactor to use login in parent and protect data input.\n",
+  "version": "2.0.1",
+  "releaseNotes": "v2.0.1   adjust logging a bit tighter.\nv2.0.0   Refactor to use login in parent and protect data input.",
   "documentationLink": "http://www.quicksmart.com/qs_etherrain.html",
   "communityLink": "",
   "drivers": [
