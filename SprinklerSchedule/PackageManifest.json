@@ -11,6 +11,7 @@
   "apps": [
     {
       "name": "Sprinkler Schedule Manager",
+      "id": "096fca6d-0ea9-442e-8b3c-126527e00d25",
       "namespace": "csteele",
       "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/SprinklerSchedule/SprinklerSchedule_parent.groovy",
       "required": true,
@@ -20,6 +21,7 @@
     },
     {
       "name": "Sprinkler Valve Timetable",
+      "id": "9aeb656d-120e-4a6c-9dfb-eb5755f360be",
       "namespace": "csteele",
       "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/SprinklerSchedule/SprinklerSchedule_child.groovy",
       "required": true,
@@ -29,6 +31,7 @@
     },
     {
       "name": "Sprinkler Switch Timetable",
+      "id": "19a256dd-94b2-40a5-90f1-05e7038515f8",
       "namespace": "csteele",
       "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/master/SprinklerSchedule/SprinklerSchedule_childS.groovy",
       "required": true,
@@ -40,6 +43,7 @@
   "drivers":[
     {
       "name": "hybrid RainCheck",
+      "id": "hybridRainCheck",
       "namespace": "csteele",
       "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/refs/heads/master/SprinklerSchedule/hybridRainCheck.groovy",
       "required": false,
