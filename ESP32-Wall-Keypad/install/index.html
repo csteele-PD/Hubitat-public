@@ -1,10 +1,154 @@
-<html>
-  <head>
-    <title>
-      ESP Wall Keyboard Code Installer
-    </title>
-  </head>
-  <body>
-    Placeholder text.
-  </body>
-</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ESP32-Wall-Keypad — Installer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+<style>
+  :root{
+    --bg: #15171b;
+    --panel: #1c1f24;
+    --panel-line: #2b2f36;
+    --ink: #e9ebee;
+    --ink-dim: #9aa1ab;
+    --amber: #ffb020;
+    --amber-dim: #7a5a1c;
+    --teal: #3ddc97;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --display: 'Space Grotesk', sans-serif;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(255,255,255,0.035) 1px, transparent 0);
+    background-size: 24px 24px;
+    color: var(--ink);
+    font-family: var(--mono);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 56px 20px 80px;
+  }
+  .wrap{ width: 100%; max-width: 620px; }
+
+  .keypad{
+    display: grid;
+    grid-template-columns: repeat(3, 44px);
+    gap: 8px;
+    margin: 0 0 28px;
+  }
+  .keypad span{
+    width: 44px; height: 44px;
+    border: 1px solid var(--panel-line);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--ink-dim);
+    background: var(--panel);
+    transition: border-color .25s ease, color .25s ease, box-shadow .25s ease;
+  }
+  .keypad span.lit{
+    color: var(--amber);
+    border-color: var(--amber-dim);
+    box-shadow: 0 0 14px -4px rgba(255,176,32,0.55);
+    animation: glow 2.6s ease-in-out infinite;
+  }
+  @keyframes glow{
+    0%, 100% { opacity: 1; }
+    50% { opacity: .45; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .keypad span.lit{ animation: none; }
+  }
+
+  h1{
+    font-family: var(--display);
+    font-size: 30px;
+    line-height: 1.15;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  h1 span{ color: var(--amber); }
+  .sub{
+    color: var(--ink-dim);
+    font-size: 14px;
+    margin: 0 0 40px;
+    max-width: 46ch;
+  }
+
+  .eyebrow{
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin: 0 0 8px;
+  }
+
+  .panel{
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    border-radius: 10px;
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+
+  .steps{
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    counter-reset: step;
+  }
+  .steps li{
+    counter-increment: step;
+    display: flex;
+    gap: 12px;
+    font-size: 13.5px;
+    color: var(--ink-dim);
+    padding: 9px 0;
+    border-top: 1px solid var(--panel-line);
+  }
+  .steps li:first-child{ border-top: none; padding-top: 0; }
+  .steps li::before{
+    content: counter(step);
+    flex: 0 0 auto;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: #262a30;
+    color: var(--ink);
+    font-size: 11px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+  }
+  .steps li b{ color: var(--ink); font-weight: 600; }
+
+  .install-row{
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 22px;
+    flex-wrap: wrap;
+  }
+
+  esp-web-install-button button{
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: .01em;
+    background: var(--amber);
+    color: #1a1400;
+    border: none;
+    border-radius: 7px;
+    padding: 13px 22px;
+    cursor: pointer;
+    transition: transform .15s ease, filter .15s ease;
+  }
+  esp-web-install-button button:hover{ filter: brightness(1.08); }
+  esp-web-install-button button:active{ transform: scale(.98); }
