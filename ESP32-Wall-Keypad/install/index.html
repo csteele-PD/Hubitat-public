@@ -83,6 +83,11 @@
     margin: 0 0 40px;
     max-width: 46ch;
   }
+  .release{
+    color: var(--teal);
+    font-size: 13px;
+    margin: -26px 0 32px;
+  }
 
   .eyebrow{
     font-size: 11px;
@@ -99,6 +104,16 @@
     padding: 28px;
     margin-bottom: 20px;
   }
+  .hardware{
+    margin: 0 0 22px;
+    padding: 14px 16px;
+    border-left: 3px solid var(--teal);
+    background: #18231f;
+    color: var(--ink-dim);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .hardware b{ color: var(--ink); }
 
   .steps{
     list-style: none;
@@ -173,6 +188,27 @@
   }
   .browsers b{ color: var(--ink); }
 
+  .recovery{
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--panel-line);
+    color: var(--ink-dim);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .recovery summary{ color: var(--ink-dim); cursor: pointer; }
+  .recovery-content{ margin-top: 14px; }
+  .recovery label{ display:block; margin-bottom: 6px; }
+  .recovery select{
+    width: 100%;
+    background: #15171b;
+    color: var(--ink);
+    border: 1px solid var(--panel-line);
+    border-radius: 6px;
+    padding: 10px;
+    font: inherit;
+  }
+
   footer{
     margin-top: 32px;
     font-size: 12px;
@@ -199,16 +235,22 @@
   <p class="eyebrow">Firmware installer</p>
   <h1>ESP32<span>-</span>Wall<span>-</span>Keypad</h1>
   <p class="sub">
-    Flash firmware to your wall keypad directly from this browser tab —
-    no IDE, no drivers, no command line. Works over USB from Chrome or Edge.
+    Flash your keypad directly from this browser tab. A USB data cable and
+    Chrome or Edge are all that is needed.
   </p>
+  <p class="release">Current release: <b id="selected-release">0.2.3</b></p>
 
   <div class="panel">
+    <p class="hardware">
+      <b>Supported hardware:</b> Waveshare ESP32-S3 3.5-inch LCD Touch Display
+      boards. Both the original ST7796/FT6336 and newer AXS15231B display variants
+      are detected automatically.
+    </p>
     <ol class="steps">
-      <li><b>Plug in</b> the keypad's ESP32 board via USB.</li>
+      <li><b>Plug in</b> the keypad with a USB data cable.</li>
       <li><b>Click Install</b> below and pick the matching serial port when prompted.</li>
       <li><b>Wait</b> for the flash to finish — don't unplug or close the tab.</li>
-      <li><b>Connect it to Wi‑Fi</b> using the on‑screen setup once it reboots.</li>
+      <li><b>Connect it to Wi-Fi</b> using the keypad's setup access point after it reboots.</li>
     </ol>
 
     <div class="install-row">
@@ -225,6 +267,18 @@
       </esp-web-install-button>
       <span class="browsers">Needs <b>Web Serial</b> — Chrome or Edge, desktop only.</span>
     </div>
+
+    <details class="recovery">
+      <summary>Recovery or older release</summary>
+      <div class="recovery-content">
+        <label for="release-select">Firmware to install</label>
+        <select id="release-select">
+          <option value="0.2.3">0.2.3 - Current release</option>
+          <option value="0.2.2">0.2.2 - Previous release</option>
+        </select>
+        <p>This is for recovery or troubleshooting. New installations should use the current release.</p>
+      </div>
+    </details>
   </div>
 
   <footer>
@@ -233,5 +287,20 @@
   </footer>
 
 </div>
+<script>
+  const installer = document.querySelector("esp-web-install-button");
+  const releaseSelect = document.querySelector("#release-select");
+  const selectedRelease = document.querySelector("#selected-release");
+  const manifests = {
+    "0.2.3": "./manifest.json?v=0.2.3",
+    "0.2.2": "./manifest-0.2.2.json"
+  };
+
+  releaseSelect.addEventListener("change", () => {
+    const version = releaseSelect.value;
+    installer.manifest = new URL(manifests[version], window.location.href).href;
+    selectedRelease.textContent = version;
+  });
+</script>
 </body>
 </html>
