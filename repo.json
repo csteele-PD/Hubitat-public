@@ -90,9 +90,7 @@
       "category": "Convenience",
       "location": "https://raw.githubusercontent.com/csteele-pd/Hubitat-public/main/ESP32-Wall-Keypad/hubitat/packageManifest.json",
       "description": "MQTT driver and optional dashboard publisher for the ESP32 Wall Keypad."
-    }
-  ]
-}
+    },
     {
    		"name": "Generic Matter Outlet",
    		"id": "026cd1b9-b963-4852-80a5-07328e34d4d7",
