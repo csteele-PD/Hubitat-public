@@ -85,12 +85,17 @@
 		"descriptive": "<ul><li>Parent is where Optional Master Day Groups are managed.</li><li>Parent is where Optional Month by Month watering percentages are managed.</li><li>Parent is where an outside Temperature device is selected and the temperature limit is set.</li></ul><ul><li>Multiple child Timetables within the Parent Application.</li><li>Each Timetable has Days in Groups, ie. weekdays and weekends</li><li>Each Group of days within a Timetable has a Start Time and a Duration.</li><li>Groups have conditionals of OverHeat and Rain.</li><li>Each Timeline has one or more Valves selected.</li><li>Valves can be assigned to any/all of the Groups.</li></ul>",
 		"tags": ["Irrigation", "Timers"]
    	},
-    {
-      "name": "ESP32 Wall Keypad",
-      "category": "Convenience",
-      "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/refs/heads/master/ESP32-Wall-Keypad/packageManifest.json",
-      "description": "MQTT driver and optional dashboard publisher for the ESP32 Wall Keypad."
-    },
+        {
+            "name": "ESP32 Wall Keypad",
+            "category": "Convenience",
+            "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/refs/heads/master/ESP32-Wall-Keypad/packageManifest.json",
+            "description": "MQTT driver and optional dashboard publisher for the ESP32 Wall Keypad.",
+            "descriptive": "",
+            "tags": [
+                "Security",
+                "MQTT"
+            ]
+        },
     {
    		"name": "Generic Matter Outlet",
    		"id": "026cd1b9-b963-4852-80a5-07328e34d4d7",
