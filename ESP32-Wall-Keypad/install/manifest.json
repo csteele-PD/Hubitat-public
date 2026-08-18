@@ -4,6 +4,17 @@
   "builds": [
     {
       "chipFamily": "ESP32-S3",
+      "serialType": "cdc",
+      "parts": [
+        {
+          "path": "ESP32-Wall-Keypad-0.2.1.bin",
+          "offset": 0
+        }
+      ]
+    },
+    {
+      "chipFamily": "ESP32-S3",
+      "serialType": "uart",
       "parts": [
         {
           "path": "ESP32-Wall-Keypad-0.2.1.bin",
