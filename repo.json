@@ -88,7 +88,7 @@
     {
       "name": "ESP32 Wall Keypad",
       "category": "Convenience",
-      "location": "https://raw.githubusercontent.com/csteele-pd/Hubitat-public/main/ESP32-Wall-Keypad/hubitat/packageManifest.json",
+      "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/refs/heads/master/ESP32-Wall-Keypad/ESP32WallKeypadDashboardApp.groovy",
       "description": "MQTT driver and optional dashboard publisher for the ESP32 Wall Keypad."
     },
     {
