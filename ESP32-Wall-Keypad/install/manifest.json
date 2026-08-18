@@ -1,12 +1,12 @@
 {
   "name": "ESP32-Wall-Keypad",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "builds": [
     {
       "chipFamily": "ESP32",
       "parts": [
         {
-          "path": "ESP32-Wall-Keypad-0.2.0.bin",
+          "path": "ESP32-Wall-Keypad-0.2.1.bin",
           "offset": 0
         }
       ]
