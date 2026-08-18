@@ -32,7 +32,7 @@ import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 
 metadata {
-    definition(name: "ESP32 Wall Keypad MQTT", namespace: "keypad", author: "John / OpenAI", importUrl: "https://raw.githubusercontent.com/csteele-pd/Hubitat-public/main/ESP32-Wall-Keypad/hubitat/ESP32WallKeypadMQTTDriver.groovy") {
+    definition(name: "ESP32 Wall Keypad MQTT", namespace: "keypad", author: "CSteele / OpenAI", importUrl: "https://raw.githubusercontent.com/csteele-pd/Hubitat-public/main/ESP32-Wall-Keypad/hubitat/ESP32WallKeypadMQTTDriver.groovy") {
         capability "Actuator"
         capability "Initialize"
         capability "Refresh"

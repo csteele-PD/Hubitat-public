@@ -24,8 +24,8 @@ import groovy.json.JsonOutput
 
 definition(
     name: "ESP32 Wall Keypad Dashboard",
-    namespace: "keypad",
-    author: "John / OpenAI",
+    namespace: "csteele",
+    author: "CSteele / OpenAI",
     description: "Publishes selected Hubitat status summaries to an ESP32 wall keypad dashboard.",
     category: "Convenience",
     iconUrl: "",

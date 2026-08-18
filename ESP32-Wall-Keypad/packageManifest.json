@@ -7,6 +7,7 @@
   "releaseNotes": "Initial public release of the ESP32 Wall Keypad MQTT driver and optional dashboard publisher.",
   "documentationLink": "https://csteele-pd.github.io/Hubitat-public/ESP32-Wall-Keypad/install/",
   "category": "Convenience",
+  "tags": "Security, MQTT",
   "drivers": [
     {
       "id": "5f16f70b-7a03-456d-8587-a89b7fc36cfa",
