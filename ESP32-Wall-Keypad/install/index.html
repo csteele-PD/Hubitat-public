@@ -152,3 +152,86 @@
   }
   esp-web-install-button button:hover{ filter: brightness(1.08); }
   esp-web-install-button button:active{ transform: scale(.98); }
+  esp-web-install-button button:disabled{
+    background: #3a3f47; color: var(--ink-dim); cursor: not-allowed;
+  }
+
+  .unsupported{
+    display: none;
+    font-size: 13px;
+    color: var(--ink-dim);
+    background: #241a12;
+    border: 1px solid #4a3418;
+    border-radius: 7px;
+    padding: 12px 14px;
+  }
+  esp-web-install-button[install-unsupported] ~ .unsupported{ display: block; }
+
+  .browsers{
+    font-size: 12px;
+    color: var(--ink-dim);
+  }
+  .browsers b{ color: var(--ink); }
+
+  footer{
+    margin-top: 32px;
+    font-size: 12px;
+    color: var(--ink-dim);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  footer a{ color: var(--teal); text-decoration: none; }
+  footer a:hover{ text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="keypad" aria-hidden="true">
+    <span>1</span><span>2</span><span>3</span>
+    <span>4</span><span class="lit">5</span><span>6</span>
+    <span>7</span><span>8</span><span>9</span>
+    <span>*</span><span class="lit">0</span><span>#</span>
+  </div>
+
+  <p class="eyebrow">Firmware installer</p>
+  <h1>ESP32<span>-</span>Wall<span>-</span>Keypad</h1>
+  <p class="sub">
+    Flash firmware to your wall keypad directly from this browser tab —
+    no IDE, no drivers, no command line. Works over USB from Chrome or Edge.
+  </p>
+
+  <div class="panel">
+    <ol class="steps">
+      <li><b>Plug in</b> the keypad's ESP32 board via USB.</li>
+      <li><b>Click Install</b> below and pick the matching serial port when prompted.</li>
+      <li><b>Wait</b> for the flash to finish — don't unplug or close the tab.</li>
+      <li><b>Connect it to Wi‑Fi</b> using the on‑screen setup once it reboots.</li>
+    </ol>
+
+    <div class="install-row">
+      <esp-web-install-button manifest="./manifest.json">
+        <button slot="activate">Install firmware</button>
+        <span slot="unsupported" class="unsupported">
+          Your browser can't do this. Open this page in <b>Chrome</b> or <b>Edge</b> on a
+          desktop computer — Web Serial isn't available in Firefox, Safari, or on iOS.
+        </span>
+        <span slot="not-allowed" class="unsupported">
+          This page needs to be served over <b>HTTPS</b> to flash devices — reload it from
+          the GitHub Pages URL rather than a local file.
+        </span>
+      </esp-web-install-button>
+      <span class="browsers">Needs <b>Web Serial</b> — Chrome or Edge, desktop only.</span>
+    </div>
+  </div>
+
+  <footer>
+    <span>ESP32‑Wall‑Keypad</span>
+    <a href="../">← back to project</a>
+  </footer>
+
+</div>
+</body>
+</html>
