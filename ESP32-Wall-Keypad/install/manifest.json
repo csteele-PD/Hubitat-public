@@ -3,7 +3,7 @@
   "version": "0.2.1",
   "builds": [
     {
-      "chipFamily": "ESP32",
+      "chipFamily": "ESP32-S3",
       "parts": [
         {
           "path": "ESP32-Wall-Keypad-0.2.1.bin",
