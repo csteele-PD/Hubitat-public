@@ -92,8 +92,8 @@
             "description": "MQTT driver and optional dashboard publisher for the ESP32 Wall Keypad.",
             "descriptive": "",
             "tags": [
-                "Security",
-                "MQTT"
+                "MQTT",
+                "Safety & Security"
             ]
         },
     {
