@@ -20,13 +20,12 @@
  *
  *
  * csteele: v0.1.0  Initial build
+ * csteele: v0.2.5  Add paired LAN fan-out and dashboard recovery support
  *
  *
  *
  */
-/// DEVELOPMENT FORK -- use "^.*///.*\n" OR "^.*///.*\n" to remove the lines starting with /// OR containing /// -- think about the impact.
-
-public static String version()	{  return "v0.1.0"  }
+public static String version()	{  return "v0.2.5"  }
 
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
@@ -52,6 +51,10 @@ metadata {
         attribute "lastRequestId", "string"
         attribute "lastResult", "string"
         attribute "lastReason", "string"
+        attribute "lanResultJson", "string"
+        attribute "lanKeypadIp", "string"
+        attribute "lanStatus", "string"
+        attribute "lastLanPush", "string"
         attribute "keypadIp", "string"
         attribute "keypadFirmware", "string"
         attribute "armingIn", "string"
@@ -75,6 +78,8 @@ metadata {
         ]
         command "clearDashboard", [[name: "dashboardId*", type: "STRING", description: "Dashboard id to clear retained payload for"]]
         command "publishHsmDashboard", [[name: "dashboardJson*", type: "STRING", description: "HSM dashboard JSON payload"]]
+        command "processLanAction", [[name: "actionJson*", type: "STRING", description: "Keypad action JSON from the dashboard app LAN endpoint"]]
+        command "configureLanPeer", [[name: "ip*", type: "STRING", description: "Keypad IP paired by the dashboard app"]]
         command "entry"
         command "off"
         command "setArmHomeDelay"
@@ -95,8 +100,8 @@ metadata {
         input name: "requireArmCredential", type: "bool", title: "Require any credential to arm", required: true, defaultValue: false
         input name: "exitDelaySeconds", type: "number", title: "Exit delay seconds before armed state", required: true, defaultValue: 0
         input name: "entryDelaySeconds", type: "number", title: "Entry delay seconds before alarming", required: true, defaultValue: 0
-        input name: "useHubitatSafetyMonitor", type: "bool", title: "Use Hubitat Safety Monitor for arm/disarm (requires HSM Bridge app)", required: true, defaultValue: false
-        input name: "logEnable", type: "bool", title: "Enable debug logging", required: true, defaultValue: true
+        input name: "useHubitatSafetyMonitor", type: "bool", title: "Use Hubitat Safety Monitor for arm/disarm", required: true, defaultValue: false
+        input name: "logEnable", type: "bool", title: "Enable debug logging", required: true, defaultValue: false
     }
 }
 
@@ -169,7 +174,7 @@ void parse(String description) {
     if (logEnable) log.debug "MQTT topic=${topic}, payload=${payload}"
 
     if (topic == topicName("action")) {
-        handleActionPayload(payload)
+        handleActionPayload(payload, "mqtt")
     } else if (topic == topicName("availability")) {
         sendEvent(name: "keypadAvailability", value: payload)
     } else if (topic == topicName("status")) {
@@ -188,6 +193,7 @@ void publishState(String armedState, Integer delayRemaining = null) {
         payload.delay_remaining = delayRemaining < 0 ? 0 : delayRemaining
     }
     interfaces.mqtt.publish(topicName("state"), JsonOutput.toJson(payload), 1, true)
+    postLanToKeypad("state", payload)
     sendEvent(name: "alarmState", value: normalizedState)
     sendEvent(name: "securityKeypad", value: securityKeypadStateFor(normalizedState))
     sendEvent(name: "ready", value: "${currentReady()}")
@@ -454,6 +460,7 @@ void sendResult(String result, String reason = "", String message = "") {
     }
 
     interfaces.mqtt.publish(topicName("result"), JsonOutput.toJson(payload), 1, false)
+    postLanToKeypad("result", payload)
     sendEvent(name: "lastResult", value: payload.result)
     sendEvent(name: "lastReason", value: payload.reason ?: "none")
     if (logEnable) log.debug "Published result ${payload}"
@@ -461,6 +468,20 @@ void sendResult(String result, String reason = "", String message = "") {
 
 void publishHsmDashboard(String dashboardJson) {
     publishDashboard("hsm", dashboardJson)
+}
+
+void processLanAction(String actionJson) {
+    state.lanResultPayload = null
+    handleActionPayload(actionJson ?: "", "lan")
+    Map result = state.lanResultPayload instanceof Map ? state.lanResultPayload as Map : null
+    state.lanResultPayload = null
+    sendEvent(name: "lanResultJson", value: JsonOutput.toJson(result ?: [
+        device_id: deviceId,
+        request_id: "",
+        result: "rejected",
+        reason: "error",
+        message: "No response"
+    ]), isStateChange: true)
 }
 
 void publishDashboard(String dashboardId, String dashboardJson) {
@@ -483,6 +504,8 @@ void publishDashboard(String dashboardId, String dashboardJson) {
 
     payload.device_id = deviceId
     interfaces.mqtt.publish(topicName("dashboard/${normalizedDashboardId}"), JsonOutput.toJson(payload), 1, true)
+    payload.dashboard_id = normalizedDashboardId
+    postLanToKeypad("dashboard", payload)
     if (logEnable) log.debug "Published ${normalizedDashboardId} dashboard ${payload}"
 }
 
@@ -494,10 +517,15 @@ void clearDashboard(String dashboardId) {
     }
 
     interfaces.mqtt.publish(topicName("dashboard/${normalizedDashboardId}"), "", 1, true)
+    postLanToKeypad("dashboard", [
+        device_id: deviceId,
+        dashboard_id: normalizedDashboardId,
+        clear: true
+    ])
     if (logEnable) log.debug "Cleared retained ${normalizedDashboardId} dashboard"
 }
 
-private void handleActionPayload(String payload) {
+private void handleActionPayload(String payload, String source = "mqtt") {
     if (!payload?.trim()) {
         if (logEnable) log.debug "Ignoring empty action payload"
         return
@@ -505,12 +533,15 @@ private void handleActionPayload(String payload) {
 
     Map action = parseJson(payload)
     if (action == null) {
-        publishResultForAction("", "rejected", "bad_json", "Bad request")
+        publishResultForAction("", "rejected", "bad_json", "Bad request", source)
         return
     }
 
     if (action.device_id && action.device_id != deviceId) {
         if (logEnable) log.debug "Ignoring action for device_id=${action.device_id}; expected ${deviceId}"
+        if (source == "lan") {
+            publishResultForAction(action.request_id ?: "", "rejected", "wrong_device", "Wrong device", source)
+        }
         return
     }
 
@@ -519,6 +550,14 @@ private void handleActionPayload(String payload) {
     String credential = action.credential ?: ""
     Integer credentialLength = credential.length()
 
+    if (requestId && atomicState.lastProcessedActionRequestId == requestId) {
+        if (source == "lan" && atomicState.lastProcessedActionResult instanceof Map) {
+            state.lanResultPayload = atomicState.lastProcessedActionResult as Map
+        }
+        if (logEnable) log.debug "Ignoring duplicate ${source} action request_id=${requestId}"
+        return
+    }
+
     state.lastRequestId = requestId
     sendEvent(name: "lastRequestId", value: requestId)
     sendEvent(name: "lastAction", value: actionName)
@@ -526,37 +565,37 @@ private void handleActionPayload(String payload) {
 
     switch (actionName) {
         case "disarm":
-            handleDisarm(requestId, credential)
+            handleDisarm(requestId, credential, false, source)
             break
         case "arm_away":
-            handleArm(requestId, credential, "armed_away")
+            handleArm(requestId, credential, "armed_away", false, source)
             break
         case "arm_stay":
-            handleArm(requestId, credential, "armed_stay")
+            handleArm(requestId, credential, "armed_stay", false, source)
             break
         default:
-            publishResultForAction(requestId, "rejected", "unknown_action", "Unknown action")
+            publishResultForAction(requestId, "rejected", "unknown_action", "Unknown action", source)
             break
     }
 }
 
-private void handleDisarm(String requestId, String credential, boolean trustedHubCommand = false) {
+private void handleDisarm(String requestId, String credential, boolean trustedHubCommand = false, String source = "mqtt") {
     Map match = trustedHubCommand ? [valid: true, name: "Hubitat"] : credentialMatch(credential)
 
     if (!trustedHubCommand && requireValidDisarmCredential && !match.valid && credential.length() > 0) {
         if (!usesHubitatSafetyMonitor()) startEntryDelayIfArmed()
-        publishResultForAction(requestId, "rejected", "invalid_code", "Invalid code")
+        publishResultForAction(requestId, "rejected", "invalid_code", "Invalid code", source)
         return
     }
 
     if (!trustedHubCommand && requireValidDisarmCredential && !match.valid && credential.length() == 0) {
         if (!usesHubitatSafetyMonitor()) startEntryDelayIfArmed()
-        publishResultForAction(requestId, "rejected", "credential_required", "Code required")
+        publishResultForAction(requestId, "rejected", "credential_required", "Code required", source)
         return
     }
 
     sendEvent(name: "lastCodeName", value: match.name ?: "none")
-    publishResultForAction(requestId, "accepted", "", "Disarmed")
+    publishResultForAction(requestId, "accepted", "", "Disarmed", source)
 
     if (usesHubitatSafetyMonitor()) {
         requestHubitatSafetyMonitor("disarm")
@@ -571,13 +610,13 @@ private void handleDisarm(String requestId, String credential, boolean trustedHu
     publishState("disarmed")
 }
 
-private void handleArm(String requestId, String credential, String armedState, boolean trustedHubCommand = false) {
+private void handleArm(String requestId, String credential, String armedState, boolean trustedHubCommand = false, String source = "mqtt") {
     if (!trustedHubCommand && requireArmCredential && credential.length() == 0) {
-        publishResultForAction(requestId, "rejected", "credential_required", "Code required")
+        publishResultForAction(requestId, "rejected", "credential_required", "Code required", source)
         return
     }
 
-    publishResultForAction(requestId, "accepted", "", armedState == "armed_stay" ? "Partial" : "Armed")
+    publishResultForAction(requestId, "accepted", "", armedState == "armed_stay" ? "Partial" : "Armed", source)
     if (usesHubitatSafetyMonitor()) {
         requestHubitatSafetyMonitor(armedState == "armed_stay" ? hsmPartialArmCommand() : "armAway")
         return
@@ -651,7 +690,7 @@ void tickEntryDelay() {
     }
 }
 
-private void publishResultForAction(String requestId, String result, String reason, String message) {
+private void publishResultForAction(String requestId, String result, String reason, String message, String source = "mqtt") {
     state.lastRequestId = requestId ?: state.lastRequestId
     Map payload = [
         device_id: deviceId,
@@ -666,10 +705,19 @@ private void publishResultForAction(String requestId, String result, String reas
         payload.message = message
     }
 
-    interfaces.mqtt.publish(topicName("result"), JsonOutput.toJson(payload), 1, false)
+    if (source == "lan") {
+        state.lanResultPayload = payload
+    } else {
+        interfaces.mqtt.publish(topicName("result"), JsonOutput.toJson(payload), 1, false)
+        postLanToKeypad("result", payload)
+    }
+    if (requestId) {
+        atomicState.lastProcessedActionRequestId = requestId
+        atomicState.lastProcessedActionResult = payload
+    }
     sendEvent(name: "lastResult", value: result)
     sendEvent(name: "lastReason", value: reason ?: "none")
-    if (logEnable) log.debug "Published action result ${payload}"
+    if (logEnable) log.debug "${source == 'lan' ? 'Returned LAN' : 'Published'} action result ${payload}"
 }
 
 private void publishDeviceCommand(String commandName) {
@@ -679,7 +727,20 @@ private void publishDeviceCommand(String commandName) {
     ]
 
     interfaces.mqtt.publish(topicName("command"), JsonOutput.toJson(payload), 1, false)
+    postLanToKeypad("command", payload)
     if (logEnable) log.debug "Published device command ${payload}"
+}
+
+void configureLanPeer(String ip) {
+    String normalizedIp = ip?.trim()
+    if (!normalizedIp) {
+        return
+    }
+
+    state.lanKeypadIp = normalizedIp
+    sendEvent(name: "lanKeypadIp", value: normalizedIp)
+    sendEvent(name: "lanStatus", value: "paired")
+    if (logEnable) log.debug "Configured LAN keypad IP ${normalizedIp}"
 }
 
 private void initializeDelayState() {
@@ -803,6 +864,35 @@ private void handleStatusPayload(String payload) {
     if (status.ip) sendEvent(name: "keypadIp", value: status.ip)
     if (status.firmware) sendEvent(name: "keypadFirmware", value: status.firmware)
     if (status.last_request_id) sendEvent(name: "lastRequestId", value: status.last_request_id)
+}
+
+private void postLanToKeypad(String path, Map payload) {
+    String ip = state.lanKeypadIp ?: device.currentValue("lanKeypadIp")?.toString()
+    if (!ip) {
+        return
+    }
+
+    try {
+        httpPost([
+            uri: "http://${ip}/${path}",
+            requestContentType: "application/json",
+            contentType: "application/json",
+            body: JsonOutput.toJson(payload),
+            timeout: 3
+        ]) { resp ->
+            sendEvent(name: "lastLanPush", value: "${path}:${resp.status}", isStateChange: true)
+            if (logEnable) log.debug "LAN push ${path} status=${resp.status}"
+            if (resp.status >= 200 && resp.status < 300) {
+                sendEvent(name: "lanStatus", value: "ok")
+            } else {
+                sendEvent(name: "lanStatus", value: "error")
+            }
+        }
+    } catch (Exception e) {
+        sendEvent(name: "lastLanPush", value: "${path}:failed", isStateChange: true)
+        sendEvent(name: "lanStatus", value: "error")
+        if (logEnable) log.debug "LAN push ${path} failed: ${e.message}"
+    }
 }
 
 private void subscribeTopics() {

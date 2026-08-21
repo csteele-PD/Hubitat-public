@@ -12,24 +12,25 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  * Hubitat app that publishes selected home-status summaries to an ESP32 Wall Keypad
- * dashboard through the keypad MQTT driver.
+ * dashboard and provides the paired LAN bridge endpoints for direct keypad traffic.
  *
  * csteele: v0.1.0  Initial build
+ * csteele: v0.2.5  Add LAN pairing, local action/status endpoints, and reboot dashboard recovery
  */
-/// DEVELOPMENT FORK -- use "^.*///.*\n" OR "^.*///.*\n" to remove the lines starting with /// OR containing /// -- think about the impact.
-
-public static String version()	{  return "v0.1.0"  }
+public static String version()	{  return "v0.2.5"  }
 
 import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 
 definition(
     name: "ESP32 Wall Keypad Dashboard",
     namespace: "csteele",
     author: "CSteele / OpenAI",
-    description: "Publishes selected Hubitat status summaries to an ESP32 wall keypad dashboard.",
+    description: "Publishes selected Hubitat status summaries and pairs LAN keypads.",
     category: "Convenience",
     iconUrl: "",
     iconX2Url: "",
+    oauth: true,
     importUrl: "https://raw.githubusercontent.com/csteele-pd/Hubitat-public/main/ESP32-Wall-Keypad/hubitat/ESP32WallKeypadDashboardApp.groovy"
 )
 
@@ -45,6 +46,21 @@ preferences {
                   title: "Wall keypad device",
                   required: true,
                   multiple: false
+        }
+
+        section("LAN Pairing") {
+            paragraph pairingInstructions()
+            input name: "keypadIp",
+                  type: "text",
+                  title: "Keypad IP",
+                  required: false
+            input name: "keypadPairingCode",
+                  type: "text",
+                  title: "Keypad pairing code",
+                  required: false
+            input name: "pairKeypadButton",
+                  type: "button",
+                  title: "Pair keypad"
         }
 
         section("Dashboard") {
@@ -120,7 +136,7 @@ preferences {
                   type: "bool",
                   title: "Enable debug logging",
                   required: true,
-                  defaultValue: true
+                  defaultValue: false
         }
     }
 }
@@ -129,7 +145,15 @@ void appButtonHandler(String buttonName) {
     if (buttonName == "publishNowButton") {
         // Hubitat saves changed preferences after appButtonHandler returns.
         runIn(1, "publishDashboard")
+    } else if (buttonName == "pairKeypadButton") {
+        pairKeypad()
     }
+}
+
+mappings {
+    path("/action") { action: [POST: "actionHandler"] }
+    path("/status") { action: [POST: "statusHandler"] }
+    path("/ping") { action: [GET: "pingHandler"] }
 }
 
 void installed() {
@@ -145,6 +169,10 @@ void updated() {
 }
 
 void initialize() {
+    ensureAccessToken()
+    if (state.pairedKeypadIp) {
+        keypadDevice?.configureLanPeer(state.pairedKeypadIp.toString())
+    }
     if (includeHsm || mirrorHsmToKeypad) subscribe(location, "hsmStatus", "hsmStatusHandler")
     if (mirrorHsmToKeypad) subscribe(location, "hsmAlert", "hsmAlertHandler")
     if (includeMode) subscribe(location, "mode", eventHandler)
@@ -156,6 +184,55 @@ void initialize() {
     if (!selectedDevices(powerDevices).isEmpty()) subscribe(powerDevices, "power", eventHandler)
     if (mirrorHsmToKeypad) publishHsmState(location.hsmStatus?.toString(), null)
     runIn(1, "publishDashboard")
+    if (logEnable) log.debug "Dashboard appId=${app.id} paired=${state.pairedDeviceId ?: 'no'}"
+}
+
+def pingHandler() {
+    renderJson([
+        ok: true,
+        app: app.label ?: "ESP32 Wall Keypad Dashboard",
+        version: version(),
+        paired: state.pairedDeviceId != null
+    ])
+}
+
+def actionHandler() {
+    Map payload = requestJson()
+    if (payload == null) {
+        return renderJson([
+            result: "rejected",
+            reason: "bad_json",
+            message: "Bad request"
+        ], 400)
+    }
+
+    if (logEnable) log.debug "LAN action payload=${payload}"
+    keypadDevice?.processLanAction(JsonOutput.toJson(payload))
+    pauseExecution(100)
+
+    Map result = parseResultJson(keypadDevice?.currentValue("lanResultJson")?.toString(), payload.request_id?.toString())
+    renderJson(result ?: [
+        device_id: payload.device_id ?: "",
+        request_id: payload.request_id ?: "",
+        result: "rejected",
+        reason: "error",
+        message: "No keypad response"
+    ])
+}
+
+def statusHandler() {
+    Map payload = requestJson()
+    if (payload == null) {
+        return renderJson([ok: false, reason: "bad_json"], 400)
+    }
+
+    if (logEnable) log.debug "LAN status payload=${payload}"
+    if (payload.ip) {
+        keypadDevice?.configureLanPeer(payload.ip.toString())
+    }
+    publishCurrentSecurityState()
+    publishDashboard()
+    renderJson(currentKeypadState(payload.device_id?.toString()) + currentDashboardPayload())
 }
 
 void eventHandler(evt) {
@@ -199,6 +276,14 @@ void publishDashboard() {
     String json = JsonOutput.toJson(payload)
     keypadDevice.publishDashboard(id, json)
     if (logEnable) log.debug "Published dashboard id=${id}, payload=${json}"
+}
+
+private Map currentDashboardPayload() {
+    return [
+        dashboard_id: normalizeDashboardId(dashboardId) ?: "home",
+        title: dashboardTitle ?: "Home",
+        items: buildDashboardItems()
+    ]
 }
 
 private void assignInitialAppLabel() {
@@ -298,6 +383,126 @@ private void publishHsmState(String hsmStatus, Integer delaySeconds) {
     if (logEnable) log.debug "HSM status=${hsmStatus} keypad_state=${keypadState}${delaySeconds != null ? " delay_remaining=${delaySeconds}" : ""}"
 }
 
+private Map parseResultJson(String json, String requestId) {
+    if (!json) {
+        return null
+    }
+
+    try {
+        Map result = new JsonSlurper().parseText(json) as Map
+        return result.request_id == requestId ? result : null
+    } catch (Exception e) {
+        if (logEnable) log.debug "LAN result JSON parse failed: ${e.message}"
+        return null
+    }
+}
+
+private Map requestJson() {
+    try {
+        if (request?.JSON instanceof Map) {
+            return request.JSON as Map
+        }
+    } catch (Exception ignored) {
+    }
+
+    try {
+        String body = request?.body ?: ""
+        return body ? new JsonSlurper().parseText(body) as Map : null
+    } catch (Exception e) {
+        if (logEnable) log.debug "LAN JSON parse failed: ${e.message}"
+        return null
+    }
+}
+
+private void renderJson(Map payload, Integer status = 200) {
+    render status: status, contentType: "application/json", data: JsonOutput.toJson(payload)
+}
+
+private Map currentKeypadState(String requestedDeviceId = null) {
+    String deviceId = requestedDeviceId ?: keypadDevice?.currentValue("deviceId")?.toString() ?: ""
+    String hsmState = currentSecurityKeypadState()
+    String readyValue = keypadDevice?.currentValue("ready")?.toString()
+    String armedState = hsmState ?: keypadDevice?.currentValue("alarmState")?.toString() ?: "disarmed"
+    Boolean ready = hsmState != null ? true : readyValue == null ? true : readyValue.toBoolean()
+
+    return [
+        ok: true,
+        device_id: deviceId,
+        ready: ready,
+        armed_state: armedState
+    ]
+}
+
+private String lanActionUrl() {
+    ensureAccessToken()
+    return "${getFullLocalApiServerUrl()}/action?access_token=${state.accessToken}"
+}
+
+private String pairingInstructions() {
+    return "After keypad setup, open the keypad Network page. Enter its IP and pairing code here, then tap Pair keypad."
+}
+
+private void ensureAccessToken() {
+    try {
+        if (!state.accessToken) {
+            createAccessToken()
+        }
+    } catch (Exception e) {
+        log.warn "Could not create access token. Enable OAuth for this app code, then open the app again. ${e.message}"
+    }
+}
+
+private void pairKeypad() {
+    ensureAccessToken()
+
+    String ip = keypadIp?.trim()
+    String code = keypadPairingCode?.trim()
+    if (!ip || !code) {
+        log.warn "Pairing skipped; keypad IP and pairing code are required"
+        return
+    }
+
+    Map body = [
+        device_id: keypadDevice?.currentValue("deviceId") ?: "",
+        pairing_code: code,
+        action_url: lanActionUrl(),
+        protocol: 1
+    ]
+
+    try {
+        httpPost([
+            uri: "http://${ip}/pair",
+            requestContentType: "application/json",
+            contentType: "application/json",
+            body: JsonOutput.toJson(body),
+            timeout: 5
+        ]) { resp ->
+            if (resp.status >= 200 && resp.status < 300) {
+                state.pairedDeviceId = body.device_id ?: "keypad"
+                state.pairedKeypadIp = ip
+                state.pairedAt = now()
+                keypadDevice?.configureLanPeer(ip)
+                publishCurrentSecurityState()
+                runIn(1, "publishDashboard")
+                log.info "LAN paired keypadIp=${ip}"
+            } else {
+                log.warn "LAN pair failed status=${resp.status}"
+            }
+        }
+    } catch (Exception e) {
+        log.warn "LAN pair failed: ${e.message}"
+    }
+}
+
+private void publishCurrentSecurityState() {
+    String keypadState = currentSecurityKeypadState()
+    if (keypadState != null) {
+        keypadDevice?.publishState(keypadState)
+    } else {
+        keypadDevice?.refresh()
+    }
+}
+
 private Integer hsmDelaySeconds(evt) {
     try {
         def seconds = evt?.data instanceof Map ? evt.data.seconds : null
@@ -305,6 +510,10 @@ private Integer hsmDelaySeconds(evt) {
     } catch (Exception ignored) {
         return null
     }
+}
+
+private String currentSecurityKeypadState() {
+    return mirrorHsmToKeypad ? keypadStateForHsmStatus(location.hsmStatus?.toString()) : null
 }
 
 private String keypadStateForHsmStatus(String hsmStatus) {
