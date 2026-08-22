@@ -25,9 +25,9 @@
       "name": "ESP32 Wall Keypad Dashboard",
       "namespace": "csteele",
       "location": "https://raw.githubusercontent.com/csteele-PD/Hubitat-public/refs/heads/master/ESP32-Wall-Keypad/ESP32WallKeypadDashboardApp.groovy",
-      "required": false,
+      "required": true,
       "oauth": true,
-      "description": "Optional publisher for selected Hubitat status tiles and LAN pairing for an ESP32 Wall Keypad."
+      "description": "Dashboard publisher and Hubitat LAN pairing app for ESP32 Wall Keypad devices."
     }
   ]
 }
