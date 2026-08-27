@@ -16,8 +16,9 @@
  *
  * csteele: v0.1.0  Initial build
  * csteele: v0.2.5  Add LAN pairing, local action/status endpoints, and reboot dashboard recovery
+ * csteele: v0.2.6  Development
  */
-public static String version()	{  return "v0.2.5"  }
+public static String version()	{  return "v0.2.6"  }
 
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
@@ -35,110 +36,183 @@ definition(
 )
 
 preferences {
-    page(name: "mainPage", title: "ESP32 Wall Keypad Dashboard", install: true, uninstall: true) {
-        section("General") {
-            label title: "Name for this application", required: false, submitOnChange: true
-        }
+	page(name: "mainPage")
+	page(name: "lanPairPage")
+	page(name: "summaryPage")
+	page(name: "controlsPage")
 
-        section("Keypad") {
-            input name: "keypadDevice",
-                  type: "capability.securityKeypad",
-                  title: "Wall keypad device",
-                  required: true,
-                  multiple: false
-        }
+}
 
-        section("LAN Pairing") {
-            paragraph pairingInstructions()
-            input name: "keypadIp",
-                  type: "text",
-                  title: "Keypad IP",
-                  required: false
-            input name: "keypadPairingCode",
-                  type: "text",
-                  title: "Keypad pairing code",
-                  required: false
-            input name: "pairKeypadButton",
-                  type: "button",
-                  title: "Pair keypad"
-        }
+def mainPage() {
+	dynamicPage(name: "mainPage", title: "ESP32 Wall Keypad Dashboard", install: true, uninstall: true) {
+	    section() {
+	        label title: "Name for this application", required: false, submitOnChange: true
+	    }
+	
+	    section() {
+	        input name: "keypadDevice",
+	              type: "capability.securityKeypad",
+	              title: "Wall keypad device",
+	              required: true,
+	              multiple: false
+	    }
+	
+	    section() {
+            paragraph "<b>Configuration of your Keypad: </b>"
 
-        section("Dashboard") {
-            input name: "dashboardId",
-                  type: "text",
-                  title: "Dashboard id",
-                  required: true,
-                  defaultValue: "home"
-            input name: "dashboardTitle",
-                  type: "text",
-                  title: "Dashboard title",
-                  required: true,
-                  defaultValue: "Home"
-            input name: "includeHsm",
-                  type: "bool",
-                  title: "Include Hubitat Safety Monitor status",
-                  required: true,
-                  defaultValue: false
-            input name: "mirrorHsmToKeypad",
-                  type: "bool",
-                  title: "Mirror Hubitat Safety Monitor state and alerts to keypad",
-                  description: "Enable when the keypad driver is configured to use Hubitat Safety Monitor.",
-                  required: true,
-                  defaultValue: false
-            input name: "contactDevices",
-                  type: "capability.contactSensor",
-                  title: "Door/window sensors",
-                  required: false,
-                  multiple: true
-            input name: "lockDevices",
-                  type: "capability.lock",
-                  title: "Locks",
-                  required: false,
-                  multiple: true
-            input name: "waterDevices",
-                  type: "capability.waterSensor",
-                  title: "Leak sensors",
-                  required: false,
-                  multiple: true
-            input name: "switchDevices",
-                  type: "capability.switch",
-                  title: "Lights/switches",
-                  required: false,
-                  multiple: true
-            input name: "temperatureDevices",
-                  type: "capability.temperatureMeasurement",
-                  title: "Temperature sensors",
-                  required: false,
-                  multiple: true
-            input name: "powerDevices",
-                  type: "capability.powerMeter",
-                  title: "Power meters",
-                  required: false,
-                  multiple: true
-            input name: "includeMode",
-                  type: "bool",
-                  title: "Include Hubitat mode",
-                  required: true,
-                  defaultValue: true
-            input name: "tileOrder",
-                  type: "text",
-                  title: "Tile order",
-                  description: "Comma-separated: hsm,contacts,locks,leak,switches,temp,power,mode",
-                  required: true,
-                  defaultValue: "contacts,locks,leak,switches,temp,power,mode,hsm"
-        }
+	    	advDescription = '<i>LAN Pairing when using Hubitat Direct</i>'
+	    	href "lanPairPage", title: "LAN Pairing", required: false, description: advDescription, state: "complete"
+	    }
 
-        section("Options") {
-            input name: "publishNowButton",
-                  type: "button",
-                  title: "Publish dashboard now"
-            input name: "logEnable",
-                  type: "bool",
-                  title: "Enable debug logging",
-                  required: true,
-                  defaultValue: false
-        }
-    }
+	    section() {
+	    	advDescription = '<i>Summary status tiles on a Dashboard</i>'
+	    	href "summaryPage", title: "Summary Dashboard", required: false, description: advDescription, state: "complete"
+	    }
+
+	    section() {
+	    	advDescription = '<i>Interactive control tiles on a Dashboard</i>'
+	    	href "controlsPage", title: "Controls Dashboard", required: false, description: advDescription, state: "complete"
+	    }
+
+	    section("<b>Options</b>") {
+	        input name: "publishNowButton",
+	              type: "button",
+	              title: "Publish dashboard now"
+	        input name: "logEnable",
+	              type: "bool",
+	              title: "Enable debug logging",
+	              required: true,
+	              defaultValue: false
+	    }
+	}
+}
+
+def lanPairPage() {
+	dynamicPage(name: "lanPairPage", title: "<b>ESP32 Wall Keypad Pairing</b>", install: false, uninstall: false) {
+	    section() {
+	        paragraph pairingInstructions()
+	        input name: "keypadIp",
+	              type: "text",
+	              title: "Keypad IP",
+	              required: false
+	        input name: "keypadPairingCode",
+	              type: "text",
+	              title: "Keypad pairing code",
+	              required: false
+	        input name: "pairKeypadButton",
+	              type: "button",
+	              title: "Pair keypad"
+	    }
+	}
+}
+	
+
+def summaryPage() {
+	dynamicPage(name: "summaryPage", title: "<b>ESP32 Wall Keypad Summary Dashboard</b>", install: false, uninstall: false) {
+	    section() {
+	        input name: "dashboardId",
+	              type: "text",
+	              title: "Dashboard id",
+	              required: true,
+	              defaultValue: "home"
+	        input name: "dashboardTitle",
+	              type: "text",
+	              title: "Dashboard title",
+	              required: true,
+	              defaultValue: "Home"
+	        input name: "includeHsm",
+	              type: "bool",
+	              title: "Include Hubitat Safety Monitor status",
+	              required: true,
+	              defaultValue: false
+	        input name: "mirrorHsmToKeypad",
+	              type: "bool",
+	              title: "Mirror Hubitat Safety Monitor state and alerts to keypad",
+	              description: "Enable when the keypad driver is configured to use Hubitat Safety Monitor.",
+	              required: true,
+	              defaultValue: false
+	        input name: "contactDevices",
+	              type: "capability.contactSensor",
+	              title: "Door/window sensors",
+	              required: false,
+	              multiple: true
+	        input name: "lockDevices",
+	              type: "capability.lock",
+	              title: "Locks",
+	              required: false,
+	              multiple: true
+	        input name: "waterDevices",
+	              type: "capability.waterSensor",
+	              title: "Leak sensors",
+	              required: false,
+	              multiple: true
+	        input name: "switchDevices",
+	              type: "capability.switch",
+	              title: "Lights/switches",
+	              required: false,
+	              multiple: true
+	        input name: "temperatureDevices",
+	              type: "capability.temperatureMeasurement",
+	              title: "Temperature sensors",
+	              required: false,
+	              multiple: true
+	        input name: "powerDevices",
+	              type: "capability.powerMeter",
+	              title: "Power meters",
+	              required: false,
+	              multiple: true
+	        input name: "includeMode",
+	              type: "bool",
+	              title: "Include Hubitat mode",
+	              required: true,
+	              defaultValue: true
+	        input name: "tileOrder",
+	              type: "text",
+	              title: "Tile order",
+	              description: "Comma-separated: hsm,contacts,locks,leak,switches,temp,power,mode",
+	              required: true,
+	              defaultValue: "contacts,locks,leak,switches,temp,power,mode,hsm"
+	    }
+	}
+}
+
+
+def controlsPage() {
+	dynamicPage(name: "controlsPage", title: "<b>ESP32 Wall Keypad Controls Dashboard</b>", install: false, uninstall: false) {
+	    section() {
+	        paragraph "Optional interactive dashboard controls. Actuators such as switches, dimmers, valves, locks, and garage doors can be assigned to these slots."
+	        input name: "controlDevice1",
+	              type: "capability.actuator",
+	              title: "Control slot 1",
+	              required: false,
+	              multiple: false
+	        input name: "controlDevice2",
+	              type: "capability.actuator",
+	              title: "Control slot 2",
+	              required: false,
+	              multiple: false
+	        input name: "controlDevice3",
+	              type: "capability.actuator",
+	              title: "Control slot 3",
+	              required: false,
+	              multiple: false
+	        input name: "controlDevice4",
+	              type: "capability.actuator",
+	              title: "Control slot 4",
+	              required: false,
+	              multiple: false
+	        input name: "controlDevice5",
+	              type: "capability.actuator",
+	              title: "Control slot 5",
+	              required: false,
+	              multiple: false
+	        input name: "controlDevice6",
+	              type: "capability.actuator",
+	              title: "Control slot 6",
+	              required: false,
+	              multiple: false
+	    }
+	}
 }
 
 void appButtonHandler(String buttonName) {
@@ -176,10 +250,21 @@ void initialize() {
     if (includeHsm || mirrorHsmToKeypad) subscribe(location, "hsmStatus", "hsmStatusHandler")
     if (mirrorHsmToKeypad) subscribe(location, "hsmAlert", "hsmAlertHandler")
     if (includeMode) subscribe(location, "mode", eventHandler)
+    if (keypadDevice != null) subscribe(keypadDevice, "lastDashboardActionJson", dashboardActionHandler)
     if (!selectedDevices(contactDevices).isEmpty()) subscribe(contactDevices, "contact", eventHandler)
     if (!selectedDevices(lockDevices).isEmpty()) subscribe(lockDevices, "lock", eventHandler)
     if (!selectedDevices(waterDevices).isEmpty()) subscribe(waterDevices, "water", eventHandler)
     if (!selectedDevices(switchDevices).isEmpty()) subscribe(switchDevices, "switch", eventHandler)
+    selectedControlDevices().each { device ->
+        if (isSwitchDevice(device)) subscribe(device, "switch", eventHandler)
+        if (hasCapability(device, "SwitchLevel")) subscribe(device, "level", eventHandler)
+        if (isGarageDoorDevice(device)) {
+            subscribe(device, "door", eventHandler)
+            subscribe(device, "contact", eventHandler)
+        }
+        if (isLockDevice(device)) subscribe(device, "lock", eventHandler)
+        if (isValveDevice(device)) subscribe(device, "valve", eventHandler)
+    }
     if (!selectedDevices(temperatureDevices).isEmpty()) subscribe(temperatureDevices, "temperature", eventHandler)
     if (!selectedDevices(powerDevices).isEmpty()) subscribe(powerDevices, "power", eventHandler)
     if (mirrorHsmToKeypad) publishHsmState(location.hsmStatus?.toString(), null)
@@ -207,6 +292,10 @@ def actionHandler() {
     }
 
     if (logEnable) log.debug "LAN action payload=${payload}"
+    if (payload.action in ["dashboard_tap", "dashboard_control"]) {
+        return renderJson(handleDashboardControlAction(payload))
+    }
+
     keypadDevice?.processLanAction(JsonOutput.toJson(payload))
     pauseExecution(100)
 
@@ -218,6 +307,109 @@ def actionHandler() {
         reason: "error",
         message: "No keypad response"
     ])
+}
+
+private Map handleDashboardControlAction(Map payload) {
+    String expectedDeviceId = keypadDevice?.currentValue("deviceId")?.toString() ?: ""
+    String payloadDeviceId = payload.device_id?.toString() ?: ""
+    if (expectedDeviceId && payloadDeviceId && payloadDeviceId != expectedDeviceId) {
+        if (logEnable) log.debug "Ignoring dashboard action for device_id=${payloadDeviceId}; expected ${expectedDeviceId}"
+        return actionResult(payload, "rejected", "wrong_device", "Wrong device")
+    }
+
+    String tileId = payload.tile_id?.toString() ?: ""
+    def device = controlDeviceForTileId(tileId)
+    if (device == null) {
+        return actionResult(payload, "rejected", "unknown_tile", "Unknown tile")
+    }
+
+    try {
+        if (payload.action == "dashboard_control") {
+            String controlId = payload.control_id?.toString() ?: ""
+            if (controlId == "level" && hasCapability(device, "SwitchLevel")) {
+                Integer level = clampLevel(payload.value)
+                runIn(1, "publishDashboardFallback")
+                device.setLevel(level)
+                return actionResult(payload, "accepted", "", "Set ${level}%")
+            }
+            return actionResult(payload, "rejected", "unsupported_control", "Unsupported")
+        }
+
+        String zone = payload.zone?.toString() ?: "primary"
+        if (zone == "detail" && hasCapability(device, "SwitchLevel")) {
+            return actionResult(payload, "accepted", "", "Detail")
+        }
+
+        if (isGarageDoorDevice(device)) {
+            String doorValue = garageDoorValue(device)
+            if (doorValue in ["opening", "closing"]) {
+                return actionResult(payload, "rejected", "moving", "Moving")
+            }
+
+            runIn(1, "publishDashboardFallback")
+            if (doorValue == "open") {
+                device.close()
+                return actionResult(payload, "accepted", "", "Closing")
+            }
+
+            device.open()
+            return actionResult(payload, "accepted", "", "Opening")
+        }
+
+        if (isLockDevice(device)) {
+            String currentLockValue = lockValue(device)
+            if (currentLockValue in ["locking", "unlocking"]) {
+                return actionResult(payload, "rejected", "moving", "Moving")
+            }
+
+            runIn(1, "publishDashboardFallback")
+            if (currentLockValue == "locked") {
+                device.unlock()
+                return actionResult(payload, "accepted", "", "Unlocking")
+            }
+
+            device.lock()
+            return actionResult(payload, "accepted", "", "Locking")
+        }
+
+        if (isValveDevice(device)) {
+            String currentValveValue = valveValue(device)
+            runIn(1, "publishDashboardFallback")
+            if (currentValveValue == "open") {
+                device.close()
+                return actionResult(payload, "accepted", "", "Closing")
+            }
+
+            device.open()
+            return actionResult(payload, "accepted", "", "Opening")
+        }
+
+        if (!isSwitchDevice(device)) {
+            return actionResult(payload, "rejected", "unsupported_device", "Unsupported")
+        }
+
+        runIn(1, "publishDashboardFallback")
+        if (device.currentValue("switch") == "on") {
+            device.off()
+        } else {
+            device.on()
+        }
+        return actionResult(payload, "accepted", "", "Toggled")
+    } catch (Exception e) {
+        log.warn "Dashboard control failed tile=${tileId}: ${e.message}"
+        return actionResult(payload, "rejected", "command_failed", "Failed")
+    }
+}
+
+private Map actionResult(Map payload, String result, String reason, String message) {
+    Map body = [
+        device_id: payload.device_id ?: keypadDevice?.currentValue("deviceId") ?: "",
+        request_id: payload.request_id ?: "",
+        result: result
+    ]
+    if (reason) body.reason = reason
+    if (message) body.message = message
+    return body
 }
 
 def statusHandler() {
@@ -237,7 +429,20 @@ def statusHandler() {
 
 void eventHandler(evt) {
     if (logEnable) log.debug "Dashboard source event ${evt?.name}=${evt?.value}"
+    unschedule("publishDashboardFallback")
     publishDashboard()
+}
+
+void dashboardActionHandler(evt) {
+    Map payload = parseJson(evt?.value?.toString())
+    if (payload == null) {
+        return
+    }
+
+    Map result = handleDashboardControlAction(payload)
+    keypadDevice?.sendResult(result.result?.toString() ?: "accepted",
+                             result.reason?.toString() ?: "",
+                             result.message?.toString() ?: "")
 }
 
 void hsmStatusHandler(evt) {
@@ -267,22 +472,41 @@ void publishDashboard() {
         return
     }
 
-    Map payload = [
-        title: dashboardTitle ?: "Home",
-        items: buildDashboardItems()
-    ]
-
     String id = normalizeDashboardId(dashboardId) ?: "home"
-    String json = JsonOutput.toJson(payload)
-    keypadDevice.publishDashboard(id, json)
-    if (logEnable) log.debug "Published dashboard id=${id}, payload=${json}"
+    List<Map> summaryItems = buildDashboardItems()
+    if (summaryItems) {
+        Map payload = [
+            title: dashboardTitle ?: "Home",
+            items: summaryItems
+        ]
+        String json = JsonOutput.toJson(payload)
+        keypadDevice.publishDashboard(id, json)
+        if (logEnable) log.debug "Published dashboard id=${id}, payload=${json}"
+    } else {
+        keypadDevice.clearDashboard(id)
+    }
+
+    Map controlsPayload = buildControlsDashboardPayload()
+    if (controlsPayload.items) {
+        keypadDevice.publishDashboard("controls", JsonOutput.toJson(controlsPayload))
+        if (logEnable) log.debug "Published controls dashboard payload=${JsonOutput.toJson(controlsPayload)}"
+    } else {
+        keypadDevice.clearDashboard("controls")
+    }
+}
+
+void publishDashboardFallback() {
+    if (logEnable) log.debug "Dashboard fallback refresh"
+    publishDashboard()
 }
 
 private Map currentDashboardPayload() {
+    List<Map> summaryItems = buildDashboardItems()
     return [
         dashboard_id: normalizeDashboardId(dashboardId) ?: "home",
         title: dashboardTitle ?: "Home",
-        items: buildDashboardItems()
+        items: summaryItems,
+        controls: buildControlsDashboardPayload()
     ]
 }
 
@@ -302,11 +526,266 @@ private List<Map> buildDashboardItems() {
         }
     }
 
-    if (items.isEmpty()) {
-        items << [label: "Dashboard", value: "No items", state: "offline"]
+    return items
+}
+
+private Map buildControlsDashboardPayload() {
+    return [
+        title: "Controls",
+        items: selectedControlSlots().collect { slot ->
+            controlDashboardItem(slot.device, slot.index)
+        }
+    ]
+}
+
+private Map controlDashboardItem(device, Integer slot) {
+    if (device == null) return null
+
+    String tileId = "slot_${slot}"
+    if (isGarageDoorDevice(device)) {
+        String doorValue = garageDoorValue(device)
+        return [
+            id: tileId,
+            label: device.displayName?.toString() ?: "Slot ${slot}",
+            value: displayGarageDoorValue(doorValue),
+            state: dashboardStateForGarageDoor(doorValue),
+            kind: "barrier",
+            primary: !(doorValue in ["opening", "closing"]),
+            detail: false
+        ]
     }
 
-    return items
+    if (isLockDevice(device)) {
+        String value = lockValue(device)
+        return [
+            id: tileId,
+            label: device.displayName?.toString() ?: "Slot ${slot}",
+            value: displayLockValue(value),
+            state: dashboardStateForLock(value),
+            kind: "barrier",
+            primary: !(value in ["locking", "unlocking"]),
+            detail: false
+        ]
+    }
+
+    if (isValveDevice(device)) {
+        String value = valveValue(device)
+        return [
+            id: tileId,
+            label: device.displayName?.toString() ?: "Slot ${slot}",
+            value: displayValveValue(value),
+            state: value == "open" ? "info" : "ok",
+            kind: "switch",
+            primary: true,
+            detail: false
+        ]
+    }
+
+    if (!isSwitchDevice(device)) {
+        return [
+            id: tileId,
+            label: device.displayName?.toString() ?: "Slot ${slot}",
+            value: "Unsupported",
+            state: "offline",
+            kind: "unsupported",
+            primary: false,
+            detail: false
+        ]
+    }
+
+    String switchValue = device.currentValue("switch")?.toString() ?: "off"
+    Boolean dimmer = hasCapability(device, "SwitchLevel")
+    Integer level = dimmer ? clampLevel(device.currentValue("level")) : null
+    String value = dimmer && switchValue == "on" ? "${level}%" : displaySwitchValue(switchValue)
+
+    Map item = [
+        id: tileId,
+        label: device.displayName?.toString() ?: "Slot ${slot}",
+        value: value,
+        state: switchValue == "on" ? "info" : "ok",
+        kind: dimmer ? "dimmer" : "switch",
+        primary: true,
+        detail: dimmer
+    ]
+    if (dimmer) item.level = level
+    return item
+}
+
+private List selectedControlDevices() {
+    [controlDevice1, controlDevice2, controlDevice3, controlDevice4, controlDevice5, controlDevice6]
+        .findAll { it != null }
+}
+
+private List<Map> selectedControlSlots() {
+    [
+        [index: 1, device: controlDevice1],
+        [index: 2, device: controlDevice2],
+        [index: 3, device: controlDevice3],
+        [index: 4, device: controlDevice4],
+        [index: 5, device: controlDevice5],
+        [index: 6, device: controlDevice6]
+    ].findAll { it.device != null }
+}
+
+private def controlDeviceForTileId(String tileId) {
+    if (!(tileId ==~ /^slot_[1-6]$/)) {
+        return null
+    }
+    Integer index = (tileId.substring(5) as Integer) - 1
+    List devices = [controlDevice1, controlDevice2, controlDevice3, controlDevice4, controlDevice5, controlDevice6]
+    return index >= 0 && index < devices.size() ? devices[index] : null
+}
+
+private Boolean hasCapability(device, String capabilityName) {
+    try {
+        return device?.hasCapability(capabilityName)
+    } catch (Exception ignored) {
+        return false
+    }
+}
+
+private Boolean isGarageDoorDevice(device) {
+    return device != null && (
+        hasCapability(device, "GarageDoorControl") ||
+        hasCapability(device, "Garage Door Control") ||
+        currentDeviceValue(device, "door") != null
+    )
+}
+
+private Boolean isLockDevice(device) {
+    return device != null && (
+        hasCapability(device, "Lock") ||
+        currentDeviceValue(device, "lock") != null
+    )
+}
+
+private Boolean isValveDevice(device) {
+    return device != null && (
+        hasCapability(device, "Valve") ||
+        currentDeviceValue(device, "valve") != null
+    )
+}
+
+private Boolean isSwitchDevice(device) {
+    return device != null && (
+        hasCapability(device, "Switch") ||
+        currentDeviceValue(device, "switch") != null
+    )
+}
+
+private String garageDoorValue(device) {
+    String doorValue = currentDeviceValue(device, "door")?.toString()?.toLowerCase()
+    if (doorValue) return doorValue
+
+    String contactValue = currentDeviceValue(device, "contact")?.toString()?.toLowerCase()
+    if (contactValue == "open") return "open"
+    if (contactValue == "closed") return "closed"
+
+    String switchValue = currentDeviceValue(device, "switch")?.toString()?.toLowerCase()
+    return switchValue == "on" ? "open" : "closed"
+}
+
+private String lockValue(device) {
+    return currentDeviceValue(device, "lock")?.toString()?.toLowerCase() ?: "unknown"
+}
+
+private String valveValue(device) {
+    String valveValue = currentDeviceValue(device, "valve")?.toString()?.toLowerCase()
+    if (valveValue) return valveValue
+
+    String switchValue = currentDeviceValue(device, "switch")?.toString()?.toLowerCase()
+    return switchValue == "on" ? "open" : "closed"
+}
+
+private String displayGarageDoorValue(String value) {
+    switch ((value ?: "unknown").toLowerCase()) {
+        case "open":
+            return "Open"
+        case "closed":
+            return "Closed"
+        case "opening":
+            return "Opening"
+        case "closing":
+            return "Closing"
+        default:
+            return "Unknown"
+    }
+}
+
+private String displayLockValue(String value) {
+    switch ((value ?: "unknown").toLowerCase()) {
+        case "locked":
+            return "Locked"
+        case "unlocked":
+            return "Unlocked"
+        case "locking":
+            return "Locking"
+        case "unlocking":
+            return "Unlocking"
+        default:
+            return "Unknown"
+    }
+}
+
+private String displayValveValue(String value) {
+    switch ((value ?: "unknown").toLowerCase()) {
+        case "open":
+            return "Open"
+        case "closed":
+            return "Closed"
+        default:
+            return "Unknown"
+    }
+}
+
+private String dashboardStateForGarageDoor(String value) {
+    switch ((value ?: "unknown").toLowerCase()) {
+        case "closed":
+            return "ok"
+        case "open":
+            return "alert"
+        case "opening":
+        case "closing":
+            return "info"
+        default:
+            return "offline"
+    }
+}
+
+private String dashboardStateForLock(String value) {
+    switch ((value ?: "unknown").toLowerCase()) {
+        case "locked":
+            return "ok"
+        case "unlocked":
+            return "alert"
+        case "locking":
+        case "unlocking":
+            return "info"
+        default:
+            return "offline"
+    }
+}
+
+private def currentDeviceValue(device, String attributeName) {
+    try {
+        return device?.currentValue(attributeName)
+    } catch (Exception ignored) {
+        return null
+    }
+}
+
+private Integer clampLevel(value) {
+    Integer level
+    try {
+        level = value == null ? 0 : value as Integer
+    } catch (Exception ignored) {
+        level = 0
+    }
+    return Math.max(0, Math.min(100, level))
+}
+
+private String displaySwitchValue(String value) {
+    return value == "on" ? "On" : "Off"
 }
 
 private List<String> tileOrderIds() {
@@ -410,6 +889,15 @@ private Map requestJson() {
         return body ? new JsonSlurper().parseText(body) as Map : null
     } catch (Exception e) {
         if (logEnable) log.debug "LAN JSON parse failed: ${e.message}"
+        return null
+    }
+}
+
+private Map parseJson(String json) {
+    try {
+        return json ? new JsonSlurper().parseText(json) as Map : null
+    } catch (Exception e) {
+        if (logEnable) log.debug "JSON parse failed: ${e.message}; payload=${json}"
         return null
     }
 }

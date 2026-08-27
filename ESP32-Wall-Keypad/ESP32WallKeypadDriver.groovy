@@ -58,6 +58,7 @@ metadata {
         attribute "keypadIp", "string"
         attribute "keypadFirmware", "string"
         attribute "deviceId", "string"
+        attribute "lastDashboardActionJson", "string"
         attribute "armingIn", "string"
 
         command "publishState", [
@@ -93,7 +94,6 @@ metadata {
         input name: "brokerPort", type: "text", title: "MQTT broker port", required: false, defaultValue: "1883"
         input name: "mqttUsername", type: "text", title: "MQTT username", required: false
         input name: "mqttPassword", type: "password", title: "MQTT password", required: false
-        input name: "topicPrefix", type: "text", title: "Keypad topic prefix", required: true, defaultValue: "keypad/front_door"
         input name: "deviceId", type: "text", title: "Keypad device_id", required: true, defaultValue: "front_door"
         input name: "validDisarmCredential", type: "password", title: "Valid disarm credential", required: false
         input name: "maxCodeSlots", type: "number", title: "Maximum managed code slots", required: true, defaultValue: 30
@@ -134,7 +134,7 @@ void uninstalled() {
 }
 
 void initialize() {
-    sendEvent(name: "deviceId", value: deviceId)
+    sendEvent(name: "deviceId", value: configuredDeviceId())
     try {
         interfaces.mqtt.disconnect()
     } catch (Exception ignored) {
@@ -193,7 +193,7 @@ void parse(String description) {
 void publishState(String armedState, Integer delayRemaining = null) {
     String normalizedState = normalizeArmedState(armedState)
     Map payload = [
-        device_id: deviceId,
+        device_id: configuredDeviceId(),
         ready: currentReady(),
         armed_state: normalizedState
     ]
@@ -455,7 +455,7 @@ void rejectPendingHsmRequest(String reason = "not_ready") {
 
 void sendResult(String result, String reason = "", String message = "") {
     Map payload = [
-        device_id: deviceId,
+        device_id: configuredDeviceId(),
         request_id: state.lastRequestId ?: "",
         result: nullIfBlank(result) ?: "accepted"
     ]
@@ -469,6 +469,10 @@ void sendResult(String result, String reason = "", String message = "") {
 
     publishMqtt("result", payload, 1, false)
     postLanToKeypad("result", payload)
+    if (payload.request_id) {
+        atomicState.lastProcessedActionRequestId = payload.request_id
+        atomicState.lastProcessedActionResult = payload
+    }
     sendEvent(name: "lastResult", value: payload.result)
     sendEvent(name: "lastReason", value: payload.reason ?: "none")
     if (logEnable) log.debug "Published result ${payload}"
@@ -484,7 +488,7 @@ void processLanAction(String actionJson) {
     Map result = state.lanResultPayload instanceof Map ? state.lanResultPayload as Map : null
     state.lanResultPayload = null
     sendEvent(name: "lanResultJson", value: JsonOutput.toJson(result ?: [
-        device_id: deviceId,
+        device_id: configuredDeviceId(),
         request_id: "",
         result: "rejected",
         reason: "error",
@@ -505,12 +509,13 @@ void publishDashboard(String dashboardId, String dashboardJson) {
         return
     }
 
-    if (payload.device_id && payload.device_id != deviceId) {
-        if (logEnable) log.debug "Rejected ${normalizedDashboardId} dashboard publish for device_id=${payload.device_id}; expected ${deviceId}"
+    String expectedDeviceId = configuredDeviceId()
+    if (payload.device_id && payload.device_id != expectedDeviceId) {
+        if (logEnable) log.debug "Rejected ${normalizedDashboardId} dashboard publish for device_id=${payload.device_id}; expected ${expectedDeviceId}"
         return
     }
 
-    payload.device_id = deviceId
+    payload.device_id = expectedDeviceId
     publishMqtt("dashboard/${normalizedDashboardId}", payload, 1, true)
     payload.dashboard_id = normalizedDashboardId
     postLanToKeypad("dashboard", payload)
@@ -526,7 +531,7 @@ void clearDashboard(String dashboardId) {
 
     publishMqtt("dashboard/${normalizedDashboardId}", "", 1, true)
     postLanToKeypad("dashboard", [
-        device_id: deviceId,
+        device_id: configuredDeviceId(),
         dashboard_id: normalizedDashboardId,
         clear: true
     ])
@@ -545,8 +550,9 @@ private void handleActionPayload(String payload, String source = "mqtt") {
         return
     }
 
-    if (action.device_id && action.device_id != deviceId) {
-        if (logEnable) log.debug "Ignoring action for device_id=${action.device_id}; expected ${deviceId}"
+    String expectedDeviceId = configuredDeviceId()
+    if (action.device_id && action.device_id != expectedDeviceId) {
+        if (logEnable) log.debug "Ignoring action for device_id=${action.device_id}; expected ${expectedDeviceId}"
         if (source == "lan") {
             publishResultForAction(action.request_id ?: "", "rejected", "wrong_device", "Wrong device", source)
         }
@@ -580,6 +586,14 @@ private void handleActionPayload(String payload, String source = "mqtt") {
             break
         case "arm_stay":
             handleArm(requestId, credential, "armed_stay", false, source)
+            break
+        case "dashboard_tap":
+        case "dashboard_control":
+            if (requestId) {
+                atomicState.lastProcessedActionRequestId = requestId
+            }
+            sendEvent(name: "lastDashboardActionJson", value: JsonOutput.toJson(action), isStateChange: true)
+            if (logEnable) log.debug "Forwarded dashboard action ${action}"
             break
         default:
             publishResultForAction(requestId, "rejected", "unknown_action", "Unknown action", source)
@@ -701,7 +715,7 @@ void tickEntryDelay() {
 private void publishResultForAction(String requestId, String result, String reason, String message, String source = "mqtt") {
     state.lastRequestId = requestId ?: state.lastRequestId
     Map payload = [
-        device_id: deviceId,
+        device_id: configuredDeviceId(),
         request_id: requestId ?: "",
         result: result
     ]
@@ -730,7 +744,7 @@ private void publishResultForAction(String requestId, String result, String reas
 
 private void publishDeviceCommand(String commandName) {
     Map payload = [
-        device_id: deviceId,
+        device_id: configuredDeviceId(),
         command: commandName
     ]
 
@@ -865,7 +879,7 @@ private void handleStatusPayload(String payload) {
         return
     }
 
-    if (status.device_id && status.device_id != deviceId) {
+    if (status.device_id && status.device_id != configuredDeviceId()) {
         return
     }
 
@@ -938,6 +952,10 @@ private void publishMqtt(String suffix, payload, Integer qos = 1, Boolean retain
     }
 }
 
+private String configuredDeviceId() {
+    return nullIfBlank(deviceId) ?: "front_door"
+}
+
 private String mqttUri() {
     String host = brokerHost?.trim()
     String port = brokerPort?.toString()?.replaceAll(",", "")?.trim() ?: "1883"
@@ -954,7 +972,7 @@ private String mqttUri() {
 }
 
 private String topicName(String suffix) {
-    return "${topicPrefix?.trim()?.replaceAll('/+$', '')}/${suffix}"
+    return "keypad/${configuredDeviceId()}/${suffix}"
 }
 
 private Map parseJson(String payload) {

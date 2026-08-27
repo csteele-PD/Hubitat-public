@@ -2,10 +2,10 @@
   "packageName": "ESP32 Wall Keypad",
   "author": "CSteele",
   "version": "0.2.6",
-  "dateReleased": "2026-08-21",
+  "dateReleased": "2026-08-27",
   "minimumHEVersion": "2.3.0",
-  "releaseNotes": "Development after firmware 0.2.5.",
-  "documentationLink": "https://csteele-pd.github.io/Hubitat-public/ESP32-Wall-Keypad/install/",
+  "releaseNotes": "Adds Hubitat Direct LAN pairing, dashboard recovery, and interactive dashboard controls.",
+  "documentationLink": "https://csteele-pd.github.io/Hubitat-public/ESP32-Wall-Keypad/docs/",
   "category": "Convenience",
   "tags": "Security, MQTT, LAN",
   "drivers": [
