@@ -90,7 +90,7 @@ Password fields are intentionally not prefilled when the page is shown.
 From the repository root:
 
 ```sh
-source /Users/john/.espressif/v6.0.2/esp-idf/export.sh
+source /Users/csteele/.espressif/v6.0.2/esp-idf/export.sh
 idf.py build
 idf.py -p /dev/cu.usbmodem334301 flash
 idf.py -p /dev/cu.usbmodem334301 monitor
