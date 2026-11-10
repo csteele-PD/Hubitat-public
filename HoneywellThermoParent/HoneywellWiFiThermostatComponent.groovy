@@ -39,7 +39,6 @@
  * csteele: v1.3.20  Added "emergency/auxiliary" heat.
  *                    added fanOperatingState Attribute.
 **/
-/// DEVELOPMENT FORK -- use "^.*///.*\n" OR "^.*///.*\n" to remove the lines starting with /// OR containing /// -- think about the impact.
 
  public static String version()     {  return "v2.0.10"  }
 
@@ -76,7 +75,6 @@ metadata {
         command	 "setLastRunningMode"	// does nothing in this UI
         command    "caution_deleteOutdoorDevices"
         command    "caution_deleteThisThermostat"
-        command    "caution_createOutdoorDevices" ///
 
 /* -= Attribute List =-
  	[thermostatFanMode, humidifierLowerLimit, supportedThermostatFanModes, supportedThermostatModes, followSchedule, humidifierSetPoint, thermostatSetpoint, 
@@ -98,8 +96,6 @@ metadata {
        input name: "setPermHold", type: "enum", title: "Will Setpoints be temporary or permanent?", options: ["Temporary", "Permanent"], required: false, defaultValue: "Temporary"
        input name: "pollIntervals", type: "enum", title: "Set the Poll Interval.", options: [0:"off", 60:"1 minute", 120:"2 minutes", 180:"3 minutes", 300:"5 minutes",600:"10 minutes",900:"15 minutes",1800:"30 minutes",3600:"60 minutes"], required: true, defaultValue: "600"
        input name: "txtEnable", type: "bool", title: "Enable descriptionText logging", defaultValue: true
-///       
-       input name: "init_me", type: "bool", title: "Initialize this child?", defaultValue: false ///
     }
 }
 
@@ -108,11 +104,7 @@ void updated() {
 	log.warn "description logging is: ${txtEnable == true}"
 	parentUpdate()
 	poll()
-///	
-	if (init_me) parent?.componentInitialize(this.device)	///
-	device.updateSetting("init_me",[value:"false",type:"bool"]) ///
 
-///
 }
 
 void parentUpdate() {
@@ -172,12 +164,10 @@ void parse(List description) {
     }
 }
 
-///*
 void caution_createOutdoorDevices() {
     parent?.createOutdoorDevices(this.device)
 }
 
-///*/
 void caution_deleteThisThermostat() {
     parent?.componentDeleteThermostatChild(this.device)
 }

@@ -16,7 +16,6 @@
  *
  *
  *
- * csteele: DEVELOPMENT Add a removable local TCC simulator endpoint for deterministic testing. ///
  * csteele: v2.0.23  Match Honeywell's SystemSwitch enum: decode 0 as Emergency Heat, decode both
  *                    4 (auto heat) and 5 (auto cool) as Auto, send Emergency Heat as 0, and send
  *                    Auto as 4. Preserve the prior displayed mode and warn when Honeywell returns
@@ -108,7 +107,6 @@
 		The childParameterMap holds the unique preferences of each child thermostat.
 	
 */
-/// DEVELOPMENT FORK -- use "^.*///.*\n" OR "^.*///.*\n" to remove the lines starting with /// OR containing /// -- think about the impact.
 
 import groovy.transform.Field
 import java.util.concurrent.ConcurrentHashMap
@@ -140,8 +138,6 @@ import java.util.concurrent.Semaphore
 
 metadata {
 	definition (name: "Honeywell Thermo Parent", namespace: "csteele", author: "C Steele, Eric Thomas, lg kahn", singleThreaded: true) {
-///		capability "Configuration" // <-- delete this before Release also
-///		capability "Initialize"    // <-- delete this before Release also
 		command "addThermostat"
 
 /* -= Attribute List =-
@@ -154,15 +150,6 @@ metadata {
  	poll, refresh, setCoolingSetpoint, setFollowSchedule, setHeatingSetpoint, setThermostatFanMode, setThermostatMode]
 
 */	
-/// delete this section before Release:
-		command 	"WipeState"		///
-		command	"WipeData"		///
-		command 	"ClearSchedule"		///
-		command 	"removeChildDevices"		///
-		command	"deleteOutdoorChildren", [[name:"childNumber",type:"NUMBER", description:"Child Number", constraints:["NUMBER"]]]		///
-		command 	"installed"		///
-		command 	"listThermostats"		///
-/// delete section above before Release
 	}
 
 	preferences {
@@ -179,31 +166,10 @@ metadata {
 	   	options: [ "0":"None", "1800":"30 Minutes", "3600":"60 Minutes", "86400":"1 Day" ]
 
 	   input name: "descTextEnable", type: "bool", title: "Enable descriptionText logging", defaultValue: true
-	   input name: "useTccSimulator", type: "bool", title: "DEVELOPMENT ONLY: Use the local TCC simulator?", defaultValue: false 	///
-	   input name: "tccSimulatorBaseUrl", type: "text", title: "DEVELOPMENT ONLY: TCC simulator base URL", defaultValue: "http://192.168.7.246:8080", required: false 	///
 	}
 }
 
-		///
-/// delete this section before Release:
-///#include csteele.wipes /// <-- delete this before Release also
-		///
-void listThermostats() {		///
-	def cd = thermostatChildren()		///
-	def details = cd.collect { child -> "${child.displayName} [id=${child.id}, dni=${child.deviceNetworkId}]" }		///
-	if (debugOutput) log.debug "listThermostats: $details"		///
-}		///
-		///
-void createOutdoorDevices(cd) {		///
-	createOutdoorChild(cd, "Humidity")		///
-	createOutdoorChild(cd, "Temperature")		///
-}		///
 
-List<String> configure() { 		///
-	log.warn "configure..." 		///
-	runIn(1800, "logsOff", [overwrite:true]) 		///
-} 		///
-/// delete section above before Release
 
 
 void updated(){
@@ -213,7 +179,6 @@ void updated(){
 	unschedule("logsOff")
 	Integer debugDisableSeconds = configuredDebugTimeoutSeconds()
 	if (debugOutput && debugDisableSeconds > 0) runIn(debugDisableSeconds, "logsOff", [overwrite:true])
-	if (settings?.useTccSimulator == true) log.warn "DEVELOPMENT ONLY: TCC requests will use ${tccBaseUrl()}; use fake credentials and fake Device IDs only." 	///
 	clearTccSession() // credentials may have changed
 }
 
@@ -396,14 +361,6 @@ void componentDeleteThermostatChild(cd) {
 	state.nextChild = nextAvailableChildNumber()
 	if (debugOutput) log.debug "Deleted thermostat child ${thermostatDni} and its exact state entries; next child: ${state.nextChild}"
 }
-///
-///*
-void deleteOutdoorChildren(parameterNumber = null) {		///
-	String childNumber = nonNegativeInteger(parameterNumber)?.toString()		///
-	def cd = childNumber == null ? null : getChildDevice("${thermostatPrefix()}${childNumber}")		///
-	if (cd) componentDeleteOutdoorChild(cd.id)		///
-	else log.warn "No thermostat child found for child number $parameterNumber"		///
-}///
 
 void componentDeleteOutdoorChild(id) {
 	String childDeviceId = (id instanceof Number || id instanceof CharSequence) ? id.toString() : id.id.toString()
@@ -755,13 +712,6 @@ def getStatusDistrib(cd, Map decodedResult) {
 	state.childStatus[childNumber] = thermostatStatus
 	removeLegacyGlobalCapabilities()
 
-	if (debugOutput) {								///
-		log.debug "got holdTime = $holdTime"				///
-		log.debug "got Vacation Hold = $vacationHoldMode"		///
-		log.debug "got scheduleCapable = $isScheduleCapable"		///
-		log.debug "got Emergency Heat = $thermostatStatus.isEmergencyHeatAllowed"	///
-		log.debug "got child $childNumber limits: heat ${thermostatStatus.heatLowerSetptLimit}-${thermostatStatus.heatUpperSetptLimit}, cool ${thermostatStatus.coolLowerSetptLimit}-${thermostatStatus.coolUpperSetptLimit}"	///
-	}											///
 
 	String[] dniParts = cd.deviceNetworkId.split("[-_]") // which child 'owns this'?
 	
@@ -803,8 +753,6 @@ def getStatusDistrib(cd, Map decodedResult) {
 
 	//Send events 
 	if (hasIndoorHumid == false) { curHumidity = 0 }
-///	getChildDevice(cd.deviceNetworkId).parse([[name:"supportedThermostatFanModes", value: ['auto', 'circulate', 'on']]])
-///	getChildDevice(cd.deviceNetworkId).parse([[name:"supportedThermostatModes", value: ['auto', 'cool', 'emergency heat', 'heat', 'off']]])
 	getChildDevice(cd.deviceNetworkId).parse([[name:"thermostatOperatingState", value:operatingState, descriptionText:"${cd.displayName} Op State was Set to $operatingState"]])
 	getChildDevice(cd.deviceNetworkId).parse([[name:"fanOperatingState", value:fanState, descriptionText:"${cd.displayName} Fan was Set to $fanState"]])
 	getChildDevice(cd.deviceNetworkId).parse([[name:"coolingSetpoint", value:coolSetPoint, descriptionText:"${cd.displayName} Cooling was Set to $coolSetPoint", unit:"°${location.temperatureScale}"]])
@@ -813,7 +761,6 @@ def getStatusDistrib(cd, Map decodedResult) {
 
 	if (state.childParamMap."${dniParts[2]}".haveHumidifier == 'Yes') {
 		// kludge to figure out if humidifier is on, fan has to be auto, and if fan is on but not heat/cool and we have enabled the humidifyer it should be humidifying"
-		///if (debugOutput) log.debug "fanIsRunning = $fanIsRunning, equip status = $equipmentStatus, fanMode = $fanMode, temp = $curTemp, humidity = $curHumidity"
 	     
 	 	if ((fanIsRunning == true) && (equipmentStatus == 0) && (fanMode == 0)) {
 			getChildDevice(cd.deviceNetworkId).parse([[name:"humidifierStatus", value:"Humidifying", descriptionText:"${cd.displayName} Humidifier was Set to Humidifying"]])
@@ -871,7 +818,6 @@ def getHumidifierStatus(cd, String cookies, refreshGeneration = null, statusRequ
         ],
 		  timeout: 10
 	    ]
-	if (settings?.useTccSimulator == true) params.headers["X-Honeywell-Sim-Request"] = "humidifier" 	///
 
 	if (debugOutput) log.debug "sending gethumidStatus request for Device ID ${maskedHoneywellDeviceId(honeywellDeviceId)}"
 	def pData = [dni:cd.deviceNetworkId, refreshGeneration:generation, requestToken:statusRequestToken]
@@ -915,26 +861,15 @@ def getHumidifierDistrib (cd, resp) {
 	    		def p21 = pair2[1]
 	    		def p22 = pair2[2]
 		
-	    		///log.debug "p20 = $p20"
-	    		/// log.debug "p21 = $p21"
-	    		///log.debug "p22 = $p22"
 		
 	    		HumLevel = p21.toInteger()
 	    		HumMin = p20.toInteger()
 		
 	    		def pair3 = p2.split("%")
-	    		///log.debug "pair3 = $pair3"
 	    		def p30 = pair3[0]
-	    		/// log.debug "p30 = $p30"
 		
 	    		HumMax = p30.toInteger() 
 		
-	    		///if (debugOutput) {
-	    		///	log.debug "-----------------------"
-	    		///	log.debug "Got current humidifier level = $HumLevel"
-	    		///	log.debug "Got Current humidifier Min = $HumMin"
-	    		///	log.debug "Got Current humidifier Max= $HumMax"
-	    		///}
 		}
 	}
         
@@ -1111,8 +1046,6 @@ private void scheduleCommandRetry(cd, commandId, Integer delaySeconds) {
 }
 
 
-///Boolean refractory
-///void loginRefractory() { refractory = false }
 
 /* ------------------------------------------------------------------
 
@@ -1127,7 +1060,6 @@ private void scheduleCommandRetry(cd, commandId, Integer delaySeconds) {
 
 private String tccBaseUrl() {
 	String baseUrl = "https://${tccSite()}"
-	if (settings?.useTccSimulator == true) baseUrl = (settings?.tccSimulatorBaseUrl ?: "http://192.168.7.246:8080").toString().trim() 	///
 	return baseUrl.replaceAll('/+$', '')
 }
 
@@ -1137,7 +1069,6 @@ private String tccHost() {
 
 private String humidifierHost() {
 	String host = 'rs.alarmnet.com'
-	if (settings?.useTccSimulator == true) host = tccHost() 	///
 	return host
 }
 
